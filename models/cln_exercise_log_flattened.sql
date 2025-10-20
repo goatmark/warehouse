@@ -11,16 +11,16 @@ with src as (
 , flattened_data as (
     select
         src.*
-        , lower(trim(src.target_areas)) as target_area_norm
-    from src,
-    unnest(
+        , trim(area) as target_area_norm
+    from src
+    cross join unnest(
         split(
         regexp_replace(coalesce(src.target_areas, ''), r'\s*,\s*', ',')
         )
     ) as area
     where 
         1=1
-        and trim(target_areas) != ''
+        and trim(area) != ''
 )
 
 select
