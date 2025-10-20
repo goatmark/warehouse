@@ -22,5 +22,5 @@ sources:
         loaded_at_field: _airbyte_extracted_at
       - name: merchant_regex
         loaded_at_field: _airbyte_extracted_at
-      - name: account_leaf
+      - name: accounts_leaf
         loaded_at_field: _airbyte_extracted_at

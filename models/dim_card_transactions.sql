@@ -1,4 +1,4 @@
-with src as (
+with src_transactions as (
     select
         *
     from
@@ -7,21 +7,14 @@ with src as (
         1=1
 )
 
-, merchants as (
+, src_merchants as (
     select
         *
     from
-        warehouse.merchants
-)
-
-, classified_transactions as (
-    select
-        *
-    from
-        src
+        {{ref('cln_merchants')}}
 )
 
 select
     *
 from
-    classified_transactions
+    src_merchants

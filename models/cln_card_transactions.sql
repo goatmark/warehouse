@@ -1,5 +1,5 @@
 -- Import file and cast
--- Apply lowercase `description` field to improve downstream query performance
+-- Note:  field `description_lower` added here to improve downstream query performance
 with src as (
     select
         cast(key as string)                     as key
