@@ -36,4 +36,4 @@ with src as (
 select
     *
 from
-    classified_transactions;
+    classified_transactions
