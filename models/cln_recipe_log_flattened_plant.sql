@@ -8,6 +8,7 @@ with src as (
         1=1
 )
 
+-- Flatten by plants (comma-separated list)
 , flattened_data as (
     select
         src.*

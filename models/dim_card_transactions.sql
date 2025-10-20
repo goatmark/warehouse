@@ -1,4 +1,4 @@
-with src as (
+with src_transactions as (
     select
         *
     from
@@ -7,21 +7,29 @@ with src as (
         1=1
 )
 
-, merchants as (
+, src_merchants as (
     select
         *
     from
-        warehouse.merchants
+        {{ref('cln_merchants')}}
 )
 
-, classified_transactions as (
+, merchant_regex as (
     select
-        *
+        cast(regex_key as string)           as regex_key
+        , cast(merchant_key as string)      as merchant_key
+        , cast(pattern_regex as string)     as pattern_regex
     from
-        src
+        warehouse.merchant_regex
 )
-
 select
-    *
+    t.key transaction_key
+    , t.description
+    , t.description_lower
+    , t.date
+    , t.category
+    , t.amount
+    , t.card_last4
+    , t.type
 from
-    classified_transactions
+    src_transactions t

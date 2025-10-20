@@ -8,6 +8,7 @@ with src as (
         1=1
 )
 
+-- Flatten by dish type (comma-separated lists)
 , flattened_data as (
     select
         src.date
