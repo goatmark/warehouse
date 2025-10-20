@@ -16,3 +16,11 @@ sources:
         loaded_at_field: _airbyte_extracted_at
       - name: weights
         loaded_at_field: _airbyte_extracted_at
+      - name: merchants
+        loaded_at_field: _airbyte_extracted_at
+      - name: merchant_account_map
+        loaded_at_field: _airbyte_extracted_at
+      - name: merchant_regex
+        loaded_at_field: _airbyte_extracted_at
+      - name: account_leaf
+        loaded_at_field: _airbyte_extracted_at
