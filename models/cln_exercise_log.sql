@@ -3,10 +3,10 @@ with src as (
     select
         cast(id as string)                      as key
         , cast(date as date)                    as date
-        , cast(Reps as numeric)                 as reps
-        , cast(Sets as numeric)                 as sets
+        , cast(Reps as int64)                   as reps
+        , cast(Sets as int64)                   as sets
         , cast(Type as string)                  as type
-        , cast(Calories as numeric)             as calories
+        , cast(Calories as int64)               as calories
         , cast(Target_Areas as string)          as target_areas
         , cast(Weight__lbs_ as numeric)         as weight_lbs
         , cast(Distance__mi_ as numeric)        as distance_mi
@@ -38,7 +38,7 @@ with src as (
                 then 2
             else
                 1
-        end multiplier
+        end volume_load_multiplier
     from
         src
     where
@@ -50,7 +50,7 @@ with src as (
         *
         , reps * sets as volume
         , reps * sets * weight_lbs as volume_load_lbs_raw
-        , reps * sets * weight_lbs * multiplier as volume_load_lbs
+        , reps * sets * weight_lbs * volume_load_multiplier as volume_load_lbs
     from
         multiplier_data
     where
