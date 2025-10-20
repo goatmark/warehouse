@@ -6,7 +6,7 @@ with src as (
         , cast(description as string)           as description
         , cast(date as date)                    as date
         , cast(type as string)                  as type_raw
-        , cast(category as string)              as string
+        , cast(category as string)              as category
         , safe_cast(amount as numeric)          as amount
         , safe_cast(card_last4 as int64)        as card_last4
         , safe_cast(counter as numeric)         as counter
