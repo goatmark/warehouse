@@ -1,0 +1,8 @@
+version: 2
+sources:
+  - name: warehouse
+    database: data-warehouse-475122
+    schema: warehouse
+    tables:
+      - name: card_transactions
+        loaded_at_field: _airbyte_extracted_at
