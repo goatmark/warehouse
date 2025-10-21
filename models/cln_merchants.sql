@@ -13,6 +13,16 @@ with src_merchants as (
 )
 
 select
-    *
+    m.id
+    , m.merchant_name
+    , m.merchant_key
+    , s.name subcategory_name
+    , c.name category_name
+    , c.id category_id
+    , s.id subcategory_id
 from
-    src_merchants
+    src_merchants m
+left join {{source('warehouse', 'subcategories')}} as s on
+    s.id = m.subcategory_id
+left join {{source('warehouse', 'categories')}} as c on
+    c.id = s.category_id

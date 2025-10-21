@@ -9,7 +9,7 @@ with src as (
         , cast(description as string)           as description
         , cast(date as date)                    as date
         , cast(type as string)                  as type_raw
-        , cast(category as string)              as category
+        , cast(category as string)              as category_raw
         , safe_cast(amount as numeric)          as amount
         , safe_cast(card_last4 as int64)        as card_last4
         , safe_cast(counter as numeric)         as counter
@@ -23,16 +23,16 @@ with src as (
 
 , classified_transactions as (
     select
-        key
-        , description
-        , date
-        , type_raw
-        , category
-        , amount
-        , card_last4
-        , counter
-        , intermediate_key
-        , description_lower
+        s.key
+        , s.description
+        , s.date
+        , s.type_raw
+        , s.category_raw
+        , s.amount
+        , s.card_last4
+        , s.counter
+        , s.intermediate_key
+        , s.description_lower
         , case
             when s.type_raw is not null then s.type_raw
             when s.card_last4 not in ({{ var('payment_card_last4_list', [3221,4245,5083,6823]) | join(',') }})
@@ -48,25 +48,37 @@ with src as (
 , matched_transactions as (
     select
         ct.*
-        , m.name as merchant_name
-        , s.id as subcategory_id
-        , s.name as subcategory_name
-        , c.id as category_id 
-        , c.name as category_name
+        , m.merchant_key        as merchant_key
+        , m.merchant_name       as merchant_name
+        , m.subcategory_id      as subcategory_id
+        , m.subcategory_name    as subcategory_name
+        , m.category_id         as category_id 
+        , m.category_name       as category_name
     from
         classified_transactions ct
     left join {{source('warehouse', 'transaction_merchant_maps')}} as map on
         map.transaction_key = ct.key
-    left join {{source('warehouse', 'merchants')}} as m on
+    left join {{ref('cln_merchants')}} as m on
         m.merchant_key = map.merchant_key
-    left join {{source('warehouse', 'subcategories')}} as s on
-        s.id = m.subcategory_id
-    left join {{source('warehouse', 'categories')}} as c on
-        c.id = s.category_id
-
 )
 
 select
-    *
+    t.key
+    , t.merchant_name
+    , t.subcategory_name
+    , t.category_name
+    , t.amount
+    , t.description
+    , t.type
+    , t.card_last4
+    , t.intermediate_key
+    , t.counter
+    , t.description_lower
+
+    , t.category_raw
+    , t.type_raw
+    , t.merchant_key
+    , t.subcategory_id
+    , t.category_id
 from
-    classified_transactions
+    matched_transactions t
