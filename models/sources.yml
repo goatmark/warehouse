@@ -24,7 +24,7 @@ sources:
         loaded_at_field: _airbyte_extracted_at
       - name: accounts_leaf
         loaded_at_field: _airbyte_extracted_at
-      - name: transaction_merchans_map
+      - name: transaction_merchant_map
         loaded_at_field: _airbyte_extracted_at
       - name: subcategories
         loaded_at_field: _airbyte_extracted_at
