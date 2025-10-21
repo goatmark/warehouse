@@ -1,3 +1,7 @@
+-- cln_merchants.sql
+{{ config(materialized='view') }}
+
+-- Import file and cast
 with src_merchants as (
     select
         cast(merchant_key as string)        as merchant_key

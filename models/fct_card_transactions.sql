@@ -1,3 +1,7 @@
+-- fct_card_transactions.sql
+{{ config(materialized='view') }}
+
+-- Import files
 with src_transactions as (
     select
         *

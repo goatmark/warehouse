@@ -1,3 +1,6 @@
+-- cln_recipe_log_flattened_type.sql
+{{ config(materialized='view') }}
+
 -- Import from cln_recipe_log.sql model
 with src as (
     select

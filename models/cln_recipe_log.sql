@@ -1,3 +1,6 @@
+-- cln_recipe_log.sql
+{{ config(materialized='view') }}
+
 -- Import file and cast
 with src as (
     select
