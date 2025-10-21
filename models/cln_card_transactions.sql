@@ -64,6 +64,7 @@ with src as (
 
 select
     t.key
+    , t.date
     , t.merchant_name
     , t.subcategory_name
     , t.category_name
