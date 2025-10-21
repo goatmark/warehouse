@@ -44,7 +44,7 @@ with src as (
     from
         src as s
 )
-/*
+
 , matched_transactions as (
     select
         ct.*
@@ -55,7 +55,7 @@ with src as (
         , c.name as category_name
     from
         classified_transactions ct
-    left join {{source('warehouse', 'transaction_merchant_map')}} as map on
+    left join {{source('warehouse', 'transaction_merchant_maps')}} as map on
         map.transaction_key = ct.key
     left join {{source('warehouse', 'merchants')}} as m on
         m.merchant_key = map.merchant_key
@@ -65,7 +65,6 @@ with src as (
         c.id = s.category_id
 
 )
-*/
 
 select
     *
