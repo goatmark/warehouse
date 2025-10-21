@@ -1,3 +1,6 @@
+-- cln_exercise_log_flattened.sql
+{{ config(materialized='view') }}
+
 -- Import from cln_exercise_log.sql model
 with src as (
     select
