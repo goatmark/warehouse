@@ -25,23 +25,27 @@ with src as (
 , multiplier_data as (
     select
         src.*
+        -- Rationale:
+            -- We only calculate volume loads (reps x sets x weights) on Weights
+            -- For dumbbell-based exercises, weight of dumbbell is e.g. 30 lb x 2 -> 60 lbs total (2x)
+            -- For all other exercises, weight of e.g. barbell is same as weight of total load (1x) 
         , case
             when
-                    type = 'Cardio'
-                or  type = 'Calisthenics'
+                    src.type = 'Cardio'
+                or  src.type = 'Calisthenics'
                 then 0
             when 
-                    exercise_label_lower like '%dumbbell%'
-                or  exercise_label_lower like '%dumb bell%'
-                or  exercise_label_lower like '%cross body%'
-                or  exercise_label_lower = 'arnold press'
-                or  exercise_label_lower = 'chest press'
-                or  exercise_label_lower = 'hammer curl'
-                or  exercise_label_lower = 'shoulder shrug'
+                    src.exercise_label_lower like '%dumbbell%'
+                or  src.exercise_label_lower like '%dumb bell%'
+                or  src.exercise_label_lower like '%cross body%'
+                or  src.exercise_label_lower = 'arnold press'
+                or  src.exercise_label_lower = 'chest press'
+                or  src.exercise_label_lower = 'hammer curl'
+                or  src.exercise_label_lower = 'shoulder shrug'
                 then 2
             else
                 1
-        end volume_load_multiplier
+        end as volume_load_multiplier
     from
         src
     where
@@ -51,9 +55,8 @@ with src as (
 , cleaned_data as (
     select
         *
-        , reps * sets as volume
-        , reps * sets * weight_lbs as volume_load_lbs_raw
-        , reps * sets * weight_lbs * volume_load_multiplier as volume_load_lbs
+        , reps * sets                                           as volume
+        , reps * sets * weight_lbs * volume_load_multiplier     as volume_load_lbs
     from
         multiplier_data
     where

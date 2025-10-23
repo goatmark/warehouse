@@ -1,4 +1,4 @@
--- cln_exercise_log_flattened.sql
+-- cln_exercise_log_flattened_area.sql
 {{ config(materialized='view') }}
 
 -- Import from cln_exercise_log.sql model
