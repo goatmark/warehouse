@@ -27,6 +27,20 @@ with date_vector as (
         1
 )
 
+, finance_data as (
+    select
+        fd.date
+        , abs(sum(case when fd.transaction_type = 'Revenue' then fd.total_amount end)) total_revenue
+        , abs(sum(case when fd.transaction_type like '%Tax%' then fd.total_amount end)) total_tax
+        , abs(sum(case when fd.transaction_type = 'Expense' then fd.total_amount end)) total_spend
+    from
+        {{ref('rpt_finance')}} as fd
+    where
+        1=1
+    group by
+        1
+)
+
 , recipe_data as (
     select
         rd.date
@@ -69,22 +83,6 @@ with date_vector as (
         1
 )
 
-/*
-, finance_data as (
-    select
-        fd.date
-        , abs(sum(case when fd.transaction_type = 'Revenue' then fd.amount end)) total_revenue
-        , abs(sum(case when fd.transaction_type like '%Tax%' then fd.amount end)) total_tax
-        , abs(sum(case when fd.transaction_type = 'Expense' then fd.amount end)) total_spend
-    from
-        {{ref('rpt_finance')}} as fd
-    where
-        1=1
-    group by
-        1
-)
-*/
-
 select
     dv.date
     
@@ -98,6 +96,11 @@ select
     , ed.minutes_run
     , ed.miles_run
     , ed.calories_burned
+
+    -- Finance Data
+    , fd.total_revenue
+    , fd.total_tax
+    , fd.total_spend
 
     -- Recipe Data
     , rd.total_dishes
@@ -114,7 +117,7 @@ select
     , wd.avg_lean_body_mass
     , wd.avg_bmi
 
-    -- Checked.total_reps
+    -- Checks
     , coalesce(ed.total_workouts, 0)
     + coalesce(rd.total_dishes, 0)
     + coalesce(sd.total_items_purchased, 0)
@@ -127,6 +130,8 @@ from
     date_vector dv
 left join exercise_data ed on
     dv.date = ed.date
+left join finance_data fd on
+    dv.date = fd.date
 left join recipe_data rd on
     dv.date = rd.date
 left join shopping_data sd on
@@ -134,4 +139,4 @@ left join shopping_data sd on
 left join weight_data wd on
     dv.date = wd.date
 order by
-    dv.date
+    dv.date desc
