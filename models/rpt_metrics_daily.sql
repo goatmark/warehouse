@@ -33,6 +33,8 @@ with date_vector as (
         , abs(sum(case when fd.transaction_type = 'Revenue' then fd.total_amount end)) total_revenue
         , abs(sum(case when fd.transaction_type like '%Tax%' then fd.total_amount end)) total_tax
         , abs(sum(case when fd.transaction_type = 'Expense' then fd.total_amount end)) total_expenses
+        , abs(sum(case when fd.transaction_type = 'Expense' and coalesce(fd.merchant, '') = '' then fd.total_amount end)) uncategorized_expenses
+        , abs(sum(case when fd.transaction_type = 'Expense' and coalesce(fd.merchant, '') != '' then fd.total_amount end)) categorized_expenses
     from
         {{ref('rpt_finance')}} as fd
     where
@@ -101,6 +103,8 @@ select
     , fd.total_revenue
     , fd.total_tax
     , fd.total_expenses
+    , fd.categorized_expenses
+    , fd.uncategorized_expenses
 
     -- Recipe Data
     , rd.total_dishes
