@@ -1,32 +1,48 @@
--- fct_card_transactions.sql
-{{ config(materialized='view') }}
+-- fct_card_transactions.sql 
+{{ config(materialized='view') }} 
 
--- Import files
-with src_transactions as (
+/*
+
+with src as (
     select
-        *
-    from 
-        {{ ref('cln_card_transactions') }}
-    where 
-        1=1
-)
+        src.transaction_key
 
-, src_merchants as (
-    select 
-        *
-    from 
-        {{ ref('cln_merchants') }}
+        -- dimensions
+        , src.date
+        , src.merchant
+        , src.type
+        , src.category
+        , src.subcategory
+        , src.description
+        , src.card_last4
+        , src.amount
+
+        /* -- Commenting out. Marginal analytical value
+        -- intermediate columns
+        , src.merchant_key_raw
+        , src.merchant_key_assigned
+        , src.category_raw
+        , src.type_raw
+        , src.description_lower
+        , src.intermediate_key
+        , src.counter
+        */
+
+        -- foreign keys
+        , src.merchant_key
+        , src.category_id
+        , src.subcategory_id
+    from
+        {{ref('cln_card_transactions')}}
 )
 
 select
-    t.key
-    , t.description
-    , case
-        when regexp_contains(t.description, 'AAA') then 'AAA'
-        else 'Other'
-    end merchant_match
-    , t.date
-    , t.amount
-    , t.type
+    *
 from
-    src_transactions t
+    src
+where
+    1=1
+
+*/
+
+select 1
