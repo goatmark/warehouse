@@ -200,7 +200,3 @@ from
     enriched_transactions as t
 where
     1=1
-    and not t.is_interaccount
-    and t.amount < 0
-order by
-    abs(t.amount) desc
