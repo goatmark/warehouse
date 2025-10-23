@@ -2,8 +2,6 @@
 
 with src as (
     select
-        *
-        /*
         t.transaction_key
 
         -- dimensions
@@ -32,7 +30,6 @@ with src as (
         , t.merchant_key
         , t.category_id
         , t.subcategory_id
-        */
     from
         {{ref('cln_card_transactions')}} as t
 
@@ -40,7 +37,7 @@ with src as (
 
 select
     src.date
-    , src.type
+    , src.transaction_type
     , src.category
     , src.subcategory
     , src.merchant
