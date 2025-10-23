@@ -3,6 +3,7 @@
 
 -- Import file and cast
     -- Note:  field `description_lower` added here to improve downstream query performance
+    --    and field `description_clean` added in next CTE for further classification
 with src as (
     select
         cast(key as string)                     as transaction_key
@@ -19,11 +20,12 @@ with src as (
         {{source('warehouse', 'card_transactions')}}
     where
         1=1
-)
+) 
 
 -- Classify transactions as Payments vs. Sales for analytics
 , classified_transactions as (
     select
+        -- Original keys
         s.transaction_key
         , s.description
         , s.date
@@ -34,6 +36,10 @@ with src as (
         , s.counter
         , s.intermediate_key
         , s.description_lower
+        -- Introduce description_clean for use in interaccount assignment in next SQ
+        , substr(regexp_replace(s.description_lower, '[^a-z]+', ''), 1) as description_clean
+
+        -- Added transformation
         , case
             when s.type_raw is not null then s.type_raw
             when s.card_last4 not in ({{ var('payment_card_last4_list', [3221,4245,5083,6823]) | join(',') }})
@@ -42,6 +48,7 @@ with src as (
                 then 'Payment'
             else 'Sale'
         end as type
+        , 
     from
         src as s
 )
@@ -98,7 +105,13 @@ with src as (
         , ct.counter
         , ct.intermediate_key
         , ct.description_lower
+        , ct.description_clean
         , ct.type
+
+        -- New interaccount field
+        , {{ is_interaccount('ct.description_clean') }} as is_interaccount
+        
+        -- Merchant key metadata
         , coalesce(map.merchant_key, dmt.merchant_key) as merchant_key
         , map.merchant_key merchant_key_raw
         , dmt.merchant_key merchant_key_assigned
@@ -123,6 +136,20 @@ with src as (
         , mt.counter
         , mt.intermediate_key
         , mt.description_lower
+        , mt.description_clean
+        , mt.is_interaccount
+        , case
+            when mt.is_interaccount then 'Interaccount'
+            when   mt.description_clean like '%fedwire%' 
+                or mt.description_clean like '%depositid%'
+                or mt.description_clean like '%freshacomdmcc%' 
+                then 'Revenue'
+            when mt.description_clean like '%irs%' 
+                then 'Tax - US'
+            when mt.description_clean like '%hmrc%' 
+                then 'Tax - UK'
+            else 'Expense'
+        end transaction_type
         , mt.type
         , mt.merchant_key
         , mt.merchant_key_raw
@@ -146,19 +173,22 @@ select
     -- dimensions
     , t.date
     , t.merchant_name as merchant
-    , t.type
+    , t.transaction_type
     , t.category_name as category
     , t.subcategory_name as subcategory
     , t.description
+    , t.is_interaccount
     , t.card_last4
     , t.amount
 
     -- intermediate columns
+    , t.type type_old
     , t.merchant_key_raw
     , t.merchant_key_assigned
     , t.category_raw
     , t.type_raw
     , t.description_lower
+    , t.description_clean
     , t.intermediate_key
     , t.counter
 
@@ -170,3 +200,7 @@ from
     enriched_transactions as t
 where
     1=1
+    and not t.is_interaccount
+    and t.amount < 0
+order by
+    abs(t.amount) desc
