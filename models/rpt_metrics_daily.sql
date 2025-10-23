@@ -32,7 +32,7 @@ with date_vector as (
         fd.date
         , abs(sum(case when fd.transaction_type = 'Revenue' then fd.total_amount end)) total_revenue
         , abs(sum(case when fd.transaction_type like '%Tax%' then fd.total_amount end)) total_tax
-        , abs(sum(case when fd.transaction_type = 'Expense' then fd.total_amount end)) total_spend
+        , abs(sum(case when fd.transaction_type = 'Expense' then fd.total_amount end)) total_expenses
     from
         {{ref('rpt_finance')}} as fd
     where
@@ -100,7 +100,7 @@ select
     -- Finance Data
     , fd.total_revenue
     , fd.total_tax
-    , fd.total_spend
+    , fd.total_expenses
 
     -- Recipe Data
     , rd.total_dishes
