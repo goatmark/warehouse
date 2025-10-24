@@ -9,6 +9,8 @@
         'edwardjones',
         'jpmorganchaseexttrnsfr',
         'manualcr',
+        'nonchase',
+        'non-chase',
         'onlinetransfer',
         'paymentthankyou',
         'paymenttochase',
