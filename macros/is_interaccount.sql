@@ -6,6 +6,7 @@
         'chasecreditcrd',
         'consumeronline',
         'crbkrg',
+        'currencycloud',
         'edwardjones',
         'jpmorganchaseexttrnsfr',
         'manualcr',

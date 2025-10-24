@@ -142,11 +142,14 @@ with src as (
             when mt.is_interaccount then 'Interaccount'
             when   mt.description_clean like '%chicagoventures%' 
                 or mt.description_clean like '%depositid%'
+                or mt.description_clean like '%facebookconsumer%w'
                 or mt.description_clean like '%fedwire%'
-                or mt.description_clean like '%freshacomdmcc%' 
-                or mt.description_clean like '%freshapayout%'
+                or mt.description_clean like '%fresha%'
                 or mt.description_clean like '%interestpayment%'
                 or mt.description_clean like '%tegus%'
+                or mt.description_clean like '%checkxxxx%'
+                or mt.description_clean like '%remoteonline%'
+                or mt.description_clean like '%universityofchachdepositppdid%'
                 then 'Revenue'
             when mt.description_clean like '%irs%'
              or  mt.description_clean like '%ildeptofrev%'
@@ -206,3 +209,7 @@ from
     enriched_transactions as t
 where
     1=1
+    and t.transaction_type = 'Expense'
+    and coalesce(t.merchant, 'Unknown') = 'Unknown'
+order by
+    t.date desc
