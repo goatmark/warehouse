@@ -206,4 +206,3 @@ from
     enriched_transactions as t
 where
     1=1
-    and merchant = 'Illinois Department of Revenue'
