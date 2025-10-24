@@ -4,7 +4,7 @@
 -- Import file and cast
     -- Note:  field `description_lower` added here to improve downstream query performance
     --    and field `description_clean` added in next CTE for further classification
-with src as (
+with src as (e
     select
         cast(key as string)                     as transaction_key
         , cast(description as string)           as description
@@ -209,7 +209,5 @@ from
     enriched_transactions as t
 where
     1=1
-    and t.transaction_type = 'Expense'
-    and coalesce(t.merchant, 'Unknown') = 'Unknown'
 order by
     t.date desc
