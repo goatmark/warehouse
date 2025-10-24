@@ -16,6 +16,7 @@
         'paymentthankyou',
         'paymenttochase',
         'paypaltransfer',
+        'realtimetransferrecdfromabacontrbnkfrombnfwiserefmark',
         'robinhood',
         'stardata',
         'transferfromcd',
