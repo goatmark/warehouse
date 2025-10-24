@@ -4,7 +4,7 @@
 -- Import file and cast
     -- Note:  field `description_lower` added here to improve downstream query performance
     --    and field `description_clean` added in next CTE for further classification
-with src as (e
+with src as (
     select
         cast(key as string)                     as transaction_key
         , cast(description as string)           as description
@@ -142,7 +142,7 @@ with src as (e
             when mt.is_interaccount then 'Interaccount'
             when   mt.description_clean like '%chicagoventures%' 
                 or mt.description_clean like '%depositid%'
-                or mt.description_clean like '%facebookconsumer%w'
+                or mt.description_clean like '%facebookconsumer%'
                 or mt.description_clean like '%fedwire%'
                 or mt.description_clean like '%fresha%'
                 or mt.description_clean like '%interestpayment%'
