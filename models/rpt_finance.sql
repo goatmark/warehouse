@@ -46,7 +46,6 @@ from
     src
 where
     1=1
-    and src.transaction_type = 'Revenue'
 group by
     1
     , 2
