@@ -149,7 +149,7 @@ with src as (
                 or mt.description_clean like '%tegus%'
                 then 'Revenue'
             when mt.description_clean like '%irs%'
-             or  mt.description_clean like '%illinoisdepartmentofrevenue' 
+             or  mt.description_clean like '%illinoisdepartmentofrevenue%' 
                 then 'Tax - US'
             when mt.description_clean like '%hmrc%' 
                 then 'Tax - UK'
