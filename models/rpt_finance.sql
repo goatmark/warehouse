@@ -38,14 +38,15 @@ with src as (
 select
     src.date
     , src.transaction_type
-    , src.category
-    , src.subcategory
-    , src.merchant
+    , coalesce(src.category, 'Unknown') category
+    , coalesce(src.subcategory, 'Unknown') subcategory
+    , coalesce(src.merchant, 'Unknown') merchant
     , sum(src.amount) total_amount
 from
     src
 where
     1=1
+    and src.transaction_type = 'Revenue'
 group by
     1
     , 2
