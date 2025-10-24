@@ -149,7 +149,8 @@ with src as (
                 or mt.description_clean like '%tegus%'
                 then 'Revenue'
             when mt.description_clean like '%irs%'
-             or  mt.description_clean like '%illinoisdepartmentofrevenue%' 
+             or  mt.description_clean like '%ildeptofrev%'
+             or  mt.description_clean like '%ildepofrev%'
                 then 'Tax - US'
             when mt.description_clean like '%hmrc%' 
                 then 'Tax - UK'
@@ -205,3 +206,4 @@ from
     enriched_transactions as t
 where
     1=1
+    and merchant = 'Illinois Department of Revenue'
