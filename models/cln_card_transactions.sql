@@ -140,9 +140,13 @@ with src as (
         , mt.is_interaccount
         , case
             when mt.is_interaccount then 'Interaccount'
-            when   mt.description_clean like '%fedwire%' 
+            when   mt.description_clean like '%chicagoventures%' 
                 or mt.description_clean like '%depositid%'
+                or mt.description_clean like '%fedwire%'
                 or mt.description_clean like '%freshacomdmcc%' 
+                or mt.description_clean like '%freshapayout%'
+                or mt.description_clean like '%interestpayment%'
+                or mt.description_clean like '%tegus%'
                 then 'Revenue'
             when mt.description_clean like '%irs%' 
                 then 'Tax - US'
@@ -156,7 +160,7 @@ with src as (
         , mt.merchant_key_assigned
 
         -- New merchant dimensions
-        , m.merchant_name
+        , m.merchant_name as merchant
         , m.category_id
         , m.category_name
         , m.subcategory_id
@@ -172,7 +176,7 @@ select
 
     -- dimensions
     , t.date
-    , t.merchant_name as merchant
+    , t.merchant
     , t.transaction_type
     , t.category_name as category
     , t.subcategory_name as subcategory
