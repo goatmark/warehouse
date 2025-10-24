@@ -15,6 +15,7 @@
         'onlinetransfer',
         'paymentthankyou',
         'paymenttochase',
+        'paypaltransfer',
         'robinhood',
         'stardata',
         'transferfromcd',
