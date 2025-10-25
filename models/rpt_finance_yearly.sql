@@ -14,7 +14,7 @@ with src as (
 )
 
 select
-    date_trunc(src.date, year)
+    date_trunc(src.date, year) date
     , src.transaction_type
     , src.category
     , src.subcategory
