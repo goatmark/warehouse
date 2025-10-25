@@ -41,6 +41,7 @@ select
     , coalesce(src.category, 'Unknown') category
     , coalesce(src.subcategory, 'Unknown') subcategory
     , coalesce(src.merchant, 'Unknown') merchant
+    , coalesce(src.description, 'Unknown') description
     , sum(src.amount) total_amount
 from
     src
@@ -52,3 +53,4 @@ group by
     , 3
     , 4
     , 5
+    , 6
