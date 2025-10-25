@@ -7,6 +7,7 @@ with src as (
         , src.category
         , src.subcategory
         , src.merchant
+        , src.description
         , src.total_amount
     from
         {{ref('rpt_finance')}} as src
@@ -19,6 +20,7 @@ select
     , src.category
     , src.subcategory
     , src.merchant
+    , src.description
     , sum(src.total_amount) total_amount
 from
     src
