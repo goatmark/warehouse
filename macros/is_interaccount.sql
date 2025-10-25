@@ -13,6 +13,7 @@
         'nonchase',
         'non-chase',
         'onlinetransfer',
+        'origconamesamuellewisjam',
         'paymentthankyou',
         'paymenttochase',
         'paypaltransfer',
