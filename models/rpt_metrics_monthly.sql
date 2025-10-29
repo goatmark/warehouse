@@ -2,13 +2,53 @@
 {{ config(materialized='table') }}
 
 -- FOR MAINTAINABILITY:
--- All queries in rpt_metrics series are identical except for params field
--- If future edits needed: make all changes in rpt_metrics_daily.sql and extrapolate,
--- changing only grain across models
+-- All queries in rpt_metrics_xxxx.sql series are identical except for params field
 
 with params as (
     -- Adjust to one value among: 'DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'
-  select 'MONTH' as grain  
+  select 'DAY' as grain  
+)
+
+, src as (
+    select
+        src.date
+        
+        -- Exercise data
+        , src.total_workouts
+        , src.total_reps
+        , src.total_sets
+        , src.total_volume
+        , src.total_volume_load_lbs
+        , src.total_runs
+        , src.minutes_run
+        , src.miles_run
+        , src.calories_burned
+
+        -- Finance Data
+        , src.total_revenue
+        , src.total_tax
+        , src.total_expenses
+        , src.categorized_expenses
+        , src.uncategorized_expenses
+
+        -- Recipe Data
+        , src.total_dishes
+        , src.new_dishes
+        , src.repeat_dishes
+        , src.recipe_cost
+
+        -- Shopping Data
+        , src.total_items_purchased
+        , src.total_quantity_purchased
+        , src.total_spend
+        
+        -- Weight Data
+        , src.total_measurements
+        , src.avg_weight
+        , src.avg_lean_body_mass
+        , src.avg_bmi
+    from
+        {{ref('rpt_metrics')}} as src
 )
 
 , date_vector as (
@@ -47,54 +87,78 @@ with params as (
   ) as d
 )
 
-, exercise_data as (
-    select  
+, src_agg as (
+    select
         case p.grain 
-            when 'DAY' then date_trunc(ed.date, DAY) 
-            when 'WEEK' then date_trunc(ed.date, WEEK) 
-            when 'MONTH' then date_trunc(ed.date, MONTH)
-            when 'QUARTER' then date_trunc(ed.date, QUARTER) 
-            when 'YEAR' then date_trunc(ed.date, YEAR)
+            when 'DAY' then date_trunc(dv.date, DAY) 
+            when 'WEEK' then date_trunc(dv.date, WEEK) 
+            when 'MONTH' then date_trunc(dv.date, MONTH)
+            when 'QUARTER' then date_trunc(dv.date, QUARTER)  
+            when 'YEAR' then date_trunc(dv.date, YEAR)
         end as date
-        , count(distinct ed.date) total_workouts
-        , sum(ed.reps) total_reps
-        , sum(ed.sets) total_sets
-        , sum(ed.volume) total_volume
-        , sum(ed.volume_load_lbs) total_volume_load_lbs
-        , count(case when ed.exercise_label = 'Treadmill' then 1 end) total_runs
-        , sum(case when ed.exercise_label = 'Treadmill' then ed.duration_min end) minutes_run
-        , sum(case when ed.exercise_label = 'Treadmill' then ed.distance_mi end) miles_run
-        , sum(case when ed.exercise_label = 'Treadmill' then ed.calories end) calories_burned
+
+        -- Exercise data
+        , sum(src.total_workouts) as total_workouts
+        , sum(src.total_reps) as total_reps
+        , sum(src.total_sets) as total_sets
+        , sum(src.total_volume) as total_volume
+        , sum(src.total_volume_load_lbs) as total_volume_load_lbs
+        , sum(src.total_runs) as total_runs
+        , sum(src.minutes_run) as minutes_run
+        , sum(src.miles_run) as miles_run
+        , sum(src.calories_burned) as calories_burned
+
+        -- Finance Data
+        , sum(src.total_revenue) as total_revenue
+        , sum(src.total_tax) as total_tax
+        , sum(src.total_expenses) as total_expenses
+        , sum(src.categorized_expenses) as categorized_expenses
+        , sum(src.uncategorized_expenses) as uncategorized_expenses
+
+        -- Recipe Data
+        , sum(src.total_dishes) as total_dishes
+        , sum(src.new_dishes) as new_dishes
+        , sum(src.repeat_dishes) as repeat_dishes
+        , sum(src.recipe_cost) as recipe_cost
+
+        -- Shopping Data
+        , sum(src.total_items_purchased) as total_items_purchased
+        , sum(src.total_quantity_purchased) as total_quantity_purchased
+        , sum(src.total_spend) as total_spend
+        
+        -- Weight Data
+        , sum(src.total_measurements) as total_measurements
+        , avg(src.avg_weight) as avg_weight
+        , avg(src.avg_lean_body_mass) as avg_lean_body_mass
+        , avg(src.avg_bmi) as avg_bmi
     from
-        {{ref('cln_exercise_log')}} as ed
+        date_vector dv
     cross join params as p
+    left join src on
+        src.date = dv.date
     where
         1=1
     group by
         1
 )
 
-, finance_data as (
+, exercise_data as (
     select
         case p.grain 
-            when 'DAY' then date_trunc(fd.date, DAY) 
-            when 'WEEK' then date_trunc(fd.date, WEEK) 
-            when 'MONTH' then date_trunc(fd.date, MONTH)
-            when 'QUARTER' then date_trunc(fd.date, QUARTER)  
-            when 'YEAR' then date_trunc(fd.date, YEAR)
+            when 'DAY' then date_trunc(ed.date, DAY) 
+            when 'WEEK' then date_trunc(ed.date, WEEK) 
+            when 'MONTH' then date_trunc(ed.date, MONTH)
+            when 'QUARTER' then date_trunc(ed.date, QUARTER)  
+            when 'YEAR' then date_trunc(ed.date, YEAR)
         end as date
-        , abs(sum(case when fd.transaction_type = 'Revenue' then fd.total_amount end)) total_revenue
-        , abs(sum(case when fd.transaction_type like '%Tax%' then fd.total_amount end)) total_tax
-        , abs(sum(case when fd.transaction_type = 'Expense' then fd.total_amount end)) total_expenses
-        , abs(sum(case when fd.transaction_type = 'Expense' and coalesce(fd.merchant, '') = '' then fd.total_amount end)) uncategorized_expenses
-        , abs(sum(case when fd.transaction_type = 'Expense' and coalesce(fd.merchant, '') != '' then fd.total_amount end)) categorized_expenses
+        , count(distinct ed.exercise_label) unique_exercises
     from
-        {{ref('rpt_finance')}} as fd
+        {{ref('cln_exercise_log')}} as ed
     cross join params as p
     where
         1=1
     group by
-        1
+        1 
 )
 
 , recipe_data as (
@@ -106,10 +170,7 @@ with params as (
             when 'QUARTER' then date_trunc(rd.date, QUARTER)  
             when 'YEAR' then date_trunc(rd.date, YEAR)
         end as date
-        , count(*) total_dishes
-        , count(case when rd.dish_status = 'New' then 1 end) new_dishes
-        , count(case when rd.dish_status = 'New' then 1 end) unique_dishes
-        , sum(rd.cost) recipe_cost
+        , count(distinct rd.dish) unique_dishes
     from
         {{ref('cln_recipe_log')}} as rd
     cross join params as p
@@ -119,13 +180,13 @@ with params as (
         1 
 )
 
-, recipe_data_plants as (
+, plant_data as (
     select
         case p.grain 
             when 'DAY' then date_trunc(rd.date, DAY) 
             when 'WEEK' then date_trunc(rd.date, WEEK) 
-            when 'MONTH' then date_trunc(rd.date, MONTH) 
-            when 'QUARTER' then date_trunc(rd.date, QUARTER) 
+            when 'MONTH' then date_trunc(rd.date, MONTH)
+            when 'QUARTER' then date_trunc(rd.date, QUARTER)  
             when 'YEAR' then date_trunc(rd.date, YEAR)
         end as date
         , count(distinct rd.plant) unique_plants
@@ -138,113 +199,55 @@ with params as (
         1 
 )
 
-, shopping_data as (
-    select
-        case p.grain 
-            when 'DAY' then date_trunc(sd.date, DAY) 
-            when 'WEEK' then date_trunc(sd.date, WEEK) 
-            when 'MONTH' then date_trunc(sd.date, MONTH)
-            when 'QUARTER' then date_trunc(sd.date, QUARTER) 
-            when 'YEAR' then date_trunc(sd.date, YEAR)
-        end as date
-        , count(*) total_items_purchased
-        , sum(sd.quantity) total_quantity_purchased
-        , sum(sd.price) total_spend
-    from
-        {{ref('cln_shopping_log')}} as sd
-    cross join params as p
-    where
-        1=1
-    group by
-        1 
-)
-
-, weight_data as (
-    select
-        case p.grain 
-            when 'DAY' then date_trunc(wd.date, DAY) 
-            when 'WEEK' then date_trunc(wd.date, WEEK) 
-            when 'MONTH' then date_trunc(wd.date, MONTH)
-            when 'QUARTER' then date_trunc(wd.date, QUARTER)  
-            when 'YEAR' then date_trunc(wd.date, YEAR)
-        end as date
-        , count(*) total_measurements
-        , avg(wd.weight) avg_weight
-        , avg(wd.lean_body_mass) avg_lean_body_mass
-        , avg(wd.bmi) avg_bmi
-    from
-        {{ref('cln_weights')}} as wd
-    cross join params as p
-    where
-        1=1
-    group by
-        1
-)
-
 select
-    dv.date
+    src.date
     
     -- Exercise data
-    , ed.total_workouts
-    , ed.total_reps
-    , ed.total_sets
-    , ed.total_volume
-    , ed.total_volume_load_lbs
-    , ed.total_runs
-    , ed.minutes_run
-    , ed.miles_run
-    , ed.calories_burned
+    , src.total_workouts
+    , src.total_reps
+    , src.total_sets
+    , src.total_volume
+    , src.total_volume_load_lbs
+    , src.total_runs
+    , src.minutes_run
+    , src.miles_run
+    , src.calories_burned
+
+    -- NEW: Unique Exercises
+    , ed.unique_exercises
 
     -- Finance Data
-    , fd.total_revenue
-    , fd.total_tax
-    , fd.total_expenses
-    , fd.categorized_expenses
-    , fd.uncategorized_expenses
+    , src.total_revenue
+    , src.total_tax
+    , src.total_expenses
+    , src.categorized_expenses
+    , src.uncategorized_expenses
+
+    -- NEW: Unique Dishes & Plants
+    , rd.unique_dishes
+    , pd.unique_plants
 
     -- Recipe Data
-    , rd.total_dishes
-    , rd.recipe_cost
-
-    -- Recipe Data cont. (flattened by plant)
-    , rdp.unique_plants
+    , src.total_dishes
+    , src.new_dishes
+    , src.repeat_dishes
+    , src.recipe_cost
 
     -- Shopping Data
-    , sd.total_items_purchased
-    , sd.total_quantity_purchased
-    , sd.total_spend
+    , src.total_items_purchased
+    , src.total_quantity_purchased
+    , src.total_spend
     
     -- Weight Data
-    , wd.total_measurements
-    , wd.avg_weight
-    , wd.avg_lean_body_mass
-    , wd.avg_bmi
-
-    -- Checks
-    /* Obsolete: previously used to ensure extra data was not being added
-    -- Attribute values could be useful but have no analytical value at present
-
-    , coalesce(ed.total_workouts, 0)
-    + coalesce(rd.total_dishes, 0)
-    + coalesce(sd.total_items_purchased, 0)
-    + coalesce(wd.total_measurements, 0) total_activity
-    , sum(coalesce(ed.total_workouts, 0)
-    + coalesce(rd.total_dishes, 0)
-    + coalesce(sd.total_items_purchased, 0)
-    + coalesce(wd.total_measurements, 0)) over (order by dv.date rows unbounded preceding) cumulative_activity
-
-    */
+    , src.total_measurements
+    , src.avg_weight
+    , src.avg_lean_body_mass
+    , src.avg_bmi
 from
-    date_vector dv
+    src_agg as src
 left join exercise_data ed on
-    dv.date = ed.date
-left join finance_data fd on
-    dv.date = fd.date
+    src.date = ed.date
 left join recipe_data rd on
-    dv.date = rd.date
-left join recipe_data_plants rdp on
-    dv.date = rdp.date
-left join shopping_data sd on
-    dv.date = sd.date
-left join weight_data wd on
-    dv.date = wd.date
+    src.date = rd.date
+left join plant_data pd on
+    src.date = pd.date

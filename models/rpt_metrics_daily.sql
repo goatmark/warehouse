@@ -4,16 +4,10 @@
 -- FOR MAINTAINABILITY:
 -- All queries in rpt_metrics_xxxx.sql series are identical except for params field
 
-select 1 as temporary
-
-/* Temporarily disable 
-
-
 with params as (
     -- Adjust to one value among: 'DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'
   select 'DAY' as grain  
 )
-
 
 , src as (
     select
@@ -96,11 +90,11 @@ with params as (
 , src_agg as (
     select
         case p.grain 
-            when 'DAY' then date_trunc(ed.date, DAY) 
-            when 'WEEK' then date_trunc(ed.date, WEEK) 
-            when 'MONTH' then date_trunc(ed.date, MONTH)
-            when 'QUARTER' then date_trunc(ed.date, QUARTER)  
-            when 'YEAR' then date_trunc(ed.date, YEAR)
+            when 'DAY' then date_trunc(dv.date, DAY) 
+            when 'WEEK' then date_trunc(dv.date, WEEK) 
+            when 'MONTH' then date_trunc(dv.date, MONTH)
+            when 'QUARTER' then date_trunc(dv.date, QUARTER)  
+            when 'YEAR' then date_trunc(dv.date, YEAR)
         end as date
 
         -- Exercise data
@@ -145,7 +139,7 @@ with params as (
     where
         1=1
     group by
-        src.date
+        1
 )
 
 , exercise_data as (
@@ -195,7 +189,7 @@ with params as (
             when 'QUARTER' then date_trunc(rd.date, QUARTER)  
             when 'YEAR' then date_trunc(rd.date, YEAR)
         end as date
-        , count(distinct rd.plant) unique_dishes
+        , count(distinct rd.plant) unique_plants
     from
         {{ref('cln_recipe_log_flattened_plant')}} as rd
     cross join params as p
@@ -257,5 +251,3 @@ left join recipe_data rd on
     src.date = rd.date
 left join plant_data pd on
     src.date = pd.date
-
-*/
