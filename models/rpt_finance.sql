@@ -1,4 +1,5 @@
 -- rpt_finance.sql
+{{ config(materialized='table') }}
 
 with src as (
     select
