@@ -107,6 +107,8 @@ with params as (
             when 'YEAR' then date_trunc(rd.date, YEAR)
         end as date
         , count(*) total_dishes
+        , count(case when rd.dish_type = 'New' then 1 end) new_dishes
+        , count(case when rd.dish_type = 'New' then 1 end) unique_dishes
         , sum(rd.cost) recipe_cost
     from
         {{ref('cln_recipe_log')}} as rd
