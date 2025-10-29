@@ -1,4 +1,4 @@
--- rpt_metrics_daily.sql
+-- rpt_metrics_yearly.sql
 {{ config(materialized='table') }}
 
 -- FOR MAINTAINABILITY:
@@ -8,7 +8,7 @@
 
 with params as (
     -- Adjust to one value among: 'DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'
-  select 'DAY' as grain  
+  select 'YEAR' as grain  
 )
 
 , date_vector as (
