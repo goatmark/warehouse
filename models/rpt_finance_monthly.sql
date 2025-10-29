@@ -1,4 +1,5 @@
 -- rpt_finance_monthly.sql
+{{ config(materialized='table') }}
 
 with src as (
     select

@@ -1,4 +1,5 @@
 -- rpt_metrics_daily.sql
+{{ config(materialized='table') }}
 
 with date_vector as (
     select 

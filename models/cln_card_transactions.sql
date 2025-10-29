@@ -145,6 +145,7 @@ with src as (
                 or mt.description_clean like '%facebookconsumer%'
                 or mt.description_clean like '%fedwire%'
                 or mt.description_clean like '%fresha%'
+                or mt.description_clean like '%interestdebit%'
                 or mt.description_clean like '%interestpayment%'
                 or mt.description_clean like '%tegus%'
                 or mt.description_clean like '%checkxxxx%'
