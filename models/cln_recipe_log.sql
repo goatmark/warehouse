@@ -40,9 +40,9 @@ select
     , cd.cost
     , cd.dish_counter
     , case
-        when dish_counter = 1 then 'New'
+        when cd.dish_counter = 1 then 'New'
         else 'Repeat'
-    end dish_type
+    end dish_status
 from
     cleaned_data as cd
 where
