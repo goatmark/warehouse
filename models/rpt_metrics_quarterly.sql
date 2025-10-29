@@ -9,48 +9,6 @@ with params as (
   select 'QUARTER' as grain  
 )
 
-, src as (
-    select
-        src.date
-        
-        -- Exercise data
-        , src.total_workouts
-        , src.total_reps
-        , src.total_sets
-        , src.total_volume
-        , src.total_volume_load_lbs
-        , src.total_runs
-        , src.minutes_run
-        , src.miles_run
-        , src.calories_burned
-
-        -- Finance Data
-        , src.total_revenue
-        , src.total_tax
-        , src.total_expenses
-        , src.categorized_expenses
-        , src.uncategorized_expenses
-
-        -- Recipe Data
-        , src.total_dishes
-        , src.new_dishes
-        , src.repeat_dishes
-        , src.recipe_cost
-
-        -- Shopping Data
-        , src.total_items_purchased
-        , src.total_quantity_purchased
-        , src.total_spend
-        
-        -- Weight Data
-        , src.total_measurements
-        , src.avg_weight
-        , src.avg_lean_body_mass
-        , src.avg_bmi
-    from
-        {{ref('rpt_metrics')}} as src
-)
-
 , src_agg as (
     select
         case p.grain 
@@ -96,7 +54,7 @@ with params as (
         , avg(src.avg_lean_body_mass) as avg_lean_body_mass
         , avg(src.avg_bmi) as avg_bmi
     from
-        src
+        {{ref('rpt_metrics')}} as src
     cross join params as p
     where
         1=1
@@ -207,9 +165,9 @@ select
     , src_agg.avg_bmi
 from
     src_agg as src_agg
-left join exercise_data ed on
+left join exercise_data as ed on
     src_agg.date = ed.date
-left join recipe_data rd on
+left join recipe_data as rd on
     src_agg.date = rd.date
-left join plant_data pd on
+left join plant_data as pd on
     src_agg.date = pd.date
