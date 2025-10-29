@@ -6,7 +6,7 @@
 
 with params as (
     -- Adjust to one value among: 'DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR'
-  select 'DAY' as grain  
+  select 'WEEK' as grain  
 )
 
 , src as (
@@ -51,50 +51,14 @@ with params as (
         {{ref('rpt_metrics')}} as src
 )
 
-, date_vector as (
-  select
-    d as date
-  from
-    params p
-  cross join unnest(
-    case
-      when p.grain = 'DAY' then generate_date_array(
-        date_trunc(date '2021-10-25', day),
-        date_trunc(current_date(), day),
-        interval 1 day
-      )
-      when p.grain = 'WEEK' then generate_date_array(
-        date_trunc(date '2021-10-25', week),
-        date_trunc(current_date(), week),
-        interval 7 day
-      )
-      when p.grain = 'MONTH' then generate_date_array(
-        date_trunc(date '2021-10-25', month),
-        date_trunc(current_date(), month),
-        interval 1 month
-      )
-      when p.grain = 'QUARTER' then generate_date_array(
-        date_trunc(date '2021-10-25', quarter),
-        date_trunc(current_date(), quarter),
-        interval 1 quarter
-      )
-      when p.grain = 'YEAR' then generate_date_array(
-        date_trunc(date '2021-10-25', year),
-        date_trunc(current_date(), year),
-        interval 1 year
-      )
-    end
-  ) as d
-)
-
 , src_agg as (
     select
         case p.grain 
-            when 'DAY' then date_trunc(dv.date, DAY) 
-            when 'WEEK' then date_trunc(dv.date, WEEK) 
-            when 'MONTH' then date_trunc(dv.date, MONTH)
-            when 'QUARTER' then date_trunc(dv.date, QUARTER)  
-            when 'YEAR' then date_trunc(dv.date, YEAR)
+            when 'DAY' then date_trunc(src.date, DAY) 
+            when 'WEEK' then date_trunc(src.date, WEEK) 
+            when 'MONTH' then date_trunc(src.date, MONTH)
+            when 'QUARTER' then date_trunc(src.date, QUARTER)  
+            when 'YEAR' then date_trunc(src.date, YEAR)
         end as date
 
         -- Exercise data
@@ -132,10 +96,8 @@ with params as (
         , avg(src.avg_lean_body_mass) as avg_lean_body_mass
         , avg(src.avg_bmi) as avg_bmi
     from
-        date_vector dv
+        src
     cross join params as p
-    left join src on
-        src.date = dv.date
     where
         1=1
     group by
@@ -200,54 +162,54 @@ with params as (
 )
 
 select
-    src.date
+    src_agg.date
     
     -- Exercise data
-    , src.total_workouts
-    , src.total_reps
-    , src.total_sets
-    , src.total_volume
-    , src.total_volume_load_lbs
-    , src.total_runs
-    , src.minutes_run
-    , src.miles_run
-    , src.calories_burned
+    , src_agg.total_workouts
+    , src_agg.total_reps
+    , src_agg.total_sets
+    , src_agg.total_volume
+    , src_agg.total_volume_load_lbs
+    , src_agg.total_runs
+    , src_agg.minutes_run
+    , src_agg.miles_run
+    , src_agg.calories_burned
 
     -- NEW: Unique Exercises
     , ed.unique_exercises
 
     -- Finance Data
-    , src.total_revenue
-    , src.total_tax
-    , src.total_expenses
-    , src.categorized_expenses
-    , src.uncategorized_expenses
+    , src_agg.total_revenue
+    , src_agg.total_tax
+    , src_agg.total_expenses
+    , src_agg.categorized_expenses
+    , src_agg.uncategorized_expenses
 
     -- NEW: Unique Dishes & Plants
     , rd.unique_dishes
     , pd.unique_plants
 
     -- Recipe Data
-    , src.total_dishes
-    , src.new_dishes
-    , src.repeat_dishes
-    , src.recipe_cost
+    , src_agg.total_dishes
+    , src_agg.new_dishes
+    , src_agg.repeat_dishes
+    , src_agg.recipe_cost
 
     -- Shopping Data
-    , src.total_items_purchased
-    , src.total_quantity_purchased
-    , src.total_spend
+    , src_agg.total_items_purchased
+    , src_agg.total_quantity_purchased
+    , src_agg.total_spend
     
     -- Weight Data
-    , src.total_measurements
-    , src.avg_weight
-    , src.avg_lean_body_mass
-    , src.avg_bmi
+    , src_agg.total_measurements
+    , src_agg.avg_weight
+    , src_agg.avg_lean_body_mass
+    , src_agg.avg_bmi
 from
-    src_agg as src
+    src_agg as src_agg
 left join exercise_data ed on
-    src.date = ed.date
+    src_agg.date = ed.date
 left join recipe_data rd on
-    src.date = rd.date
+    src_agg.date = rd.date
 left join plant_data pd on
-    src.date = pd.date
+    src_agg.date = pd.date
