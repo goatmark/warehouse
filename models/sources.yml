@@ -34,6 +34,8 @@ sources:
         loaded_at_field: _airbyte_extracted_at
       - name: youtube_categories
         loaded_at_field: _airbyte_extracted_at
+      - name: videos
+        loaded_at_field: _airbyte_extracted_at
   - name: github
     database: data-warehouse-475122
     schema: github
@@ -45,18 +47,4 @@ sources:
       - name: repositories
         loaded_at_field: _airbyte_extracted_at
       - name: users
-        loaded_at_field: _airbyte_extracted_at
-  - name: youtube
-    database: data-warehouse-475122
-    schema: youtube
-    tables:
-      - name: channel_comments
-        loaded_at_field: _airbyte_extracted_at
-      - name: channels
-        loaded_at_field: _airbyte_extracted_at
-      - name: comments
-        loaded_at_field: _airbyte_extracted_at
-      - name: video
-        loaded_at_field: _airbyte_extracted_at
-      - name: videos
         loaded_at_field: _airbyte_extracted_at
