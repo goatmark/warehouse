@@ -18,16 +18,37 @@ with src as (
         {{source('warehouse', 'videos')}} as src
 )
 
+, transcripts as (
+    select
+        vt.id
+        , vt.video_id
+        , vt.preview
+        , vt.created_at
+        , vt.updated_at
+        , vt.word_count
+        , vt.storage_path
+    from
+        {{source('warehouse', 'video_transcripts')}} as vt
+    where
+        1=1
+        and vt.status = 'completed'
+)
+
 select
-    id
-    , title
-    , description
-    , thumbnail_url
-    , has_transcript
-    , view_count
-    , url
-    , channel_id
-    , created_at
-    , updated_at
+    src.id
+    , src.title
+    , src.description
+    , src.thumbnail_url
+    , src.has_transcript
+    , src.view_count
+    , src.url
+    , t.preview as transcript_preview
+    , t.word_count as transcript_word_count
+    , t.storage_path as transcript_storage_path
+    , src.channel_id
+    , src.created_at
+    , src.updated_at
 from
     src
+left join transcripts t on
+    src.id = t.video_id
