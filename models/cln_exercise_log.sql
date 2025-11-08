@@ -112,7 +112,25 @@ with src as (
 )
 
 select
-    * 
+    key
+    , date
+    , reps
+    , sets
+    , type
+    , calories
+    , target_areas
+    , weight_lbs
+    , distance_mi
+    , duration_min
+    , exercise_label
+    , exercise_label_lower
+    , coeff
+    , number_areas
+    , area_multiplier
+    , load_multiplier_method
+    , body_weight
+    , volume
+    , volume_load_lbs
 from
     cleaned_data
 where
