@@ -4,9 +4,22 @@
 -- Import from cln_exercise_log.sql model
 with src as (
     select
-        *
+        src.date
+        , src.exercise_label
+        , src.type
+        , src.target_areas
+        , src.weight_lbs
+        , src.reps
+        , src.sets
+        , src.exercise_label_lower
+        , src.volume_load_multiplier
+        , src.volume
+        , src.volume_load_lbs
+        , src.calories
+        , src.distance_mi
+        , src.duration_min
     from
-        {{ref('cln_exercise_log')}}
+        {{ref('cln_exercise_log')}} as src
     where
         1=1
 )
@@ -14,7 +27,7 @@ with src as (
 , flattened_data as (
     select
         src.*
-        , trim(area) as target_area_norm
+        , trim(area) as target_area
     from src
     cross join unnest(
         split(
@@ -27,6 +40,26 @@ with src as (
 )
 
 select
-    *
+    fd.date
+    , fd.target_area
+    , fd.exercise_label
+    , fd.type
+    , fd.weight_lbs
+    , fd.reps
+    , fd.sets
+    , fd.exercise_label_lower
+    , fd.volume_load_multiplier
+    , fd.volume
+    , fd.volume_load_lbs
+    , fd.calories
+    , fd.distance_mi
+    , fd.duration_min
 from
-    flattened_data
+    flattened_data fd
+where
+    1=1
+    and fd.type != 'Cardio'
+order by
+    date
+    , exercise_label
+    , target_area
