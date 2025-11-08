@@ -98,10 +98,10 @@ with src as (
         , case
             when src.load_multiplier_method = 'Zero-Load'
                 then 0
+            when src.load_multiplier_method = 'Counterweight' or src.type = 'Calisthenics'
+                then src.reps * src.sets * (w.weight - coalesce(src.weight_lbs, 0)) * src.coeff
             when src.load_multiplier_method = 'Weight Coefficient'
                 then src.reps * src.sets * src.weight_lbs * src.coeff
-            when src.load_multiplier_method = 'Counterweight'
-                then src.reps * src.sets * (w.weight - coalesce(src.weight_lbs, 0)) * src.coeff
         end volume_load_lbs
     from
         src
