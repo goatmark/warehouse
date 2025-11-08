@@ -2,33 +2,29 @@
 {{ config(materialized='view') }}
 
 -- Import from cln_exercise_log.sql model
-with src as (
+with src_flattened as (
     select
         src.date
-        , src.exercise_label
-        , src.type
-        , src.target_areas
-        , src.weight_lbs
         , src.reps
         , src.sets
-        , src.exercise_label_lower
-        , src.volume_load_multiplier
-        , src.volume
-        , src.volume_load_lbs
+        , src.type
         , src.calories
+        , src.target_areas
+        , src.weight_lbs
         , src.distance_mi
         , src.duration_min
+        , src.exercise_label
+        , src.exercise_label_lower
+        , src.coeff
+        , src.number_areas
+        , src.area_multiplier
+        , src.load_multiplier_method
+        , src.body_weight
+        , src.volume
+        , src.volume_load_lbs as volume_load_lbs_total
+        , trim(area) as target_area
     from
         {{ref('cln_exercise_log')}} as src
-    where
-        1=1
-)
-
-, flattened_data as (
-    select
-        src.*
-        , trim(area) as target_area
-    from src
     cross join unnest(
         split(
         regexp_replace(coalesce(src.target_areas, ''), r'\s*,\s*', ',')
@@ -40,25 +36,30 @@ with src as (
 )
 
 select
-    fd.date
-    , fd.target_area
-    , fd.exercise_label
-    , fd.type
-    , fd.weight_lbs
-    , fd.reps
-    , fd.sets
-    , fd.exercise_label_lower
-    , fd.volume_load_multiplier
-    , fd.volume
-    , fd.volume_load_lbs
-    , fd.calories
-    , fd.distance_mi
-    , fd.duration_min
+    src.date
+    , src.exercise_label
+    , src.type
+    , src.target_areas
+    , src.target_area
+    , src.reps
+    , src.sets
+    , src.volume
+    , src.weight_lbs
+    , src.volume_load_lbs_total
+    , src.number_areas
+    , src.volume_load_lbs_total * src.area_multiplier as volume_load_lbs
+    , src.coeff
+    , src.load_multiplier_method
+    , src.body_weight
+    , src.calories
+    , src.distance_mi
+    , src.duration_min
+    , src.exercise_label_lower
+
 from
-    flattened_data fd
+    src_flattened as src
 where
     1=1
-    and fd.type != 'Cardio'
 order by
     date
     , exercise_label
