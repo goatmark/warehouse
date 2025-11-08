@@ -17,11 +17,16 @@ with src as (
 
 , cleaned_data as (
     select
-        *
+        date
+        , avg(lean_body_mass)   as lean_body_mass
+        , avg(bmi)              as bmi
+        , avg(weight)           as weight
     from
         src
     where
         1=1
+    group by
+        1
 )
 
 select
