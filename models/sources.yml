@@ -8,6 +8,10 @@ sources:
         loaded_at_field: _airbyte_extracted_at
       - name: exercise_log
         loaded_at_field: _airbyte_extracted_at
+      - name: exercise_muscles
+        loaded_at_field: _airbyte_extracted_at
+      - name: exercise_loads
+        loaded_at_field: _airbyte_extracted_at
       - name: recipe_log
         loaded_at_field: _airbyte_extracted_at
       - name: shopping_log
