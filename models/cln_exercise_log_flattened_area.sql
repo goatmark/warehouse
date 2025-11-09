@@ -17,6 +17,7 @@ with src_flattened as (
         , src.volume_load_lbs as volume_load_lbs_total
         , el.weight
         , src.volume_load_lbs * el.weight as volume_load_lbs
+        , el.muscle_name as muscle
         , em.area
         , em.region
         , src.exercise_label_lower
