@@ -9,6 +9,7 @@
         'currencycloud',
         'edwardjones',
         'jpmorganchaseexttrnsfr',
+        'kalshi',
         'manualcr',
         'nonchase',
         'non-chase',
