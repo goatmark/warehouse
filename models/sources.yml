@@ -5,52 +5,75 @@ sources:
     schema: warehouse
     tables:
       - name: card_transactions
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: exercise_log
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: exercise_muscles
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: exercise_loads
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: recipe_log
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: shopping_log
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: users
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: weights
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: merchants
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: transaction_merchant_maps
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: subcategories
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: categories
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: blog_posts
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: channels
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: email_settings
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: priorities
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: youtube_categories
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: videos
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: video_transcripts
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
   - name: github
     database: data-warehouse-475122
     schema: github
     tables:
       - name: branches
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: commits
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: repositories
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: users
-        loaded_at_field: _airbyte_extracted_at
+        config:
+          loaded_at_field: _airbyte_extracted_at
