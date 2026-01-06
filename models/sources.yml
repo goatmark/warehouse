@@ -10,6 +10,9 @@ sources:
       - name: exercise_log
         config:
           loaded_at_field: _airbyte_extracted_at
+      - name: exercises
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: exercise_muscles
         config:
           loaded_at_field: _airbyte_extracted_at
