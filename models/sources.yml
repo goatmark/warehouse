@@ -64,6 +64,9 @@ sources:
       - name: video_transcripts
         config:
           loaded_at_field: _airbyte_extracted_at
+      - name: notion_embeddings
+        config:
+          loaded_at_field: _airbyte_extracted_at
   - name: github
     database: data-warehouse-475122
     schema: github
