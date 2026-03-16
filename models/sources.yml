@@ -22,6 +22,9 @@ sources:
       - name: recipe_log
         config:
           loaded_at_field: _airbyte_extracted_at
+      - name: recipes
+        config:
+          loaded_at_field: _airbyte_extracted_at
       - name: shopping_log
         config:
           loaded_at_field: _airbyte_extracted_at
