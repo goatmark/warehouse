@@ -1,27 +1,26 @@
 -- cln_notion_embeddings.sql
 {{ config(materialized='view')}}
 
-/*
-
 with src as (
     select
-        cast(src.id as string)                  as id_raw
-        , cast(src.handle as string)            as handle
-        , cast(src.channel_id as string)        as id
-        , cast(src.created_at as timestamp)     as created_at
-        , cast(src.updated_at as timestamp)     as updated_at
+       src.id                                       as id
+       , src.db_id                                  as db_id
+       , src.page_id                                as page_id
+       , src.title                                  as title
+       , array(
+           select float64(elem)
+           from unnest(json_query_array(src.embedding)) as elem
+         )                                          as embedding
+       , src.created_at                             as created_at
+       , src.snippet                                as snippet
     from
         {{source('warehouse', 'notion_embeddings')}} as src
+    where
+        1=1
+        and src.db_id != 'befcd97e-4ea2-4731-ac28-a4faab5e8959'
 )
 
 select
-    id
-    , handle
-    , created_at
-    , updated_at
+    *
 from
     src
-
-*/
-
-select 1 as value
