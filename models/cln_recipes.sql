@@ -21,17 +21,7 @@ with src as (
         1=1
 )
 
-, plants_this_month as (
-    select
-        plant as plant_list
-    from
-        {{ref('cln_recipe_log_flattened_plant')}}
-    where
-        date_trunc(date, MONTH) = date_trunc(current_date, MONTH)
-    group by
-        1
-)
-
+-- Get flattened table of dish, plant for later comparing, filtering, and aggregation
 , plants_by_recipe as (
     select
         src.dish_name
@@ -47,6 +37,22 @@ with src as (
         and trim(plant) != ''
 )
 
+-- Identify total number of unique plants in recipes prepared in current month
+, plants_this_month as (
+    select
+        pbr.plant as plant_list
+    from
+        plants_by_recipe pbr
+    left join src on
+        src.dish_name = pbr.dish_name
+    where
+        1=1
+        and date_trunc(src.last_made, MONTH) = date_trunc(current_date, MONTH)
+    group by
+        1
+)
+
+-- Identify plants found in Yogurt Bowls (e.g. to keep Yogurt Bowls, Parfaits, Desserts from being high)
 , plants_in_breakfast as (
     select
         plant as plant_list
@@ -61,6 +67,7 @@ with src as (
         1
 )
 
+-- Count all new plants in dish (excluding those in Yogurt Bowl or consumed this month already)
 , new_plants_per_dish as (
     select
         pbr.dish_name
