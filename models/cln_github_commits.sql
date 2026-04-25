@@ -3,30 +3,22 @@
 
 with src as (
     select
-        cast(url as string)                             as commit_url
-        , cast(comments_url as string)                  as comments_url
-        , cast(html_url as string)                      as html_url
-        , cast(author as json)                          as author
-        , cast(branch as string)                        as branch
-        , cast(commit as json)                          as commit
-        , cast(node_id as string)                       as node_id
-        , cast(parents as json)                         as parents
-        , cast(committer as json)                       as committer
-        , cast(created_at as timestamp)                 as created_at
-        , cast(date_trunc(created_at, day) as date)     as date
-        , cast(repository as string)                    as repository_full
-        , substr(cast(repository as string), 
-            strpos(cast(repository as string), 
-            '/') + 1)                                   as repository
+        sha
+        , repo
+        , split(repo, '/')[safe_offset(1)]              as repo_name
+        , split(message, '\n')[safe_offset(0)]          as message
+        , author_name
+        , author_email
+        , author_login
+        , committed_at
+        , cast(date_trunc(committed_at, day) as date)   as committed_date
+        , cast(date_trunc(committed_at, week) as date)  as committed_week
+        , cast(date_trunc(committed_at, month) as date) as committed_month
+        , url
     from
-        {{source('github', 'commits')}}
+        {{ source('github', 'commits_clean') }}
+    where
+        committed_at is not null
 )
 
-select
-    src.date
-    , src.commit_url as commit_url
-    , src.repository as repository
-from
-    src
-where
-    1=1
+select * from src

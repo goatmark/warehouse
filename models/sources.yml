@@ -80,6 +80,7 @@ sources:
       - name: commits
         config:
           loaded_at_field: _airbyte_extracted_at
+      - name: commits_clean
       - name: repositories
         config:
           loaded_at_field: _airbyte_extracted_at
