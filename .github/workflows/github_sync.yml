@@ -1,0 +1,43 @@
+name: GitHub -> BigQuery Sync
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily at 6am UTC
+  workflow_dispatch:        # Manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests google-cloud-bigquery google-auth
+
+      - name: Write GCP credentials
+        run: echo "$GCP_SA_JSON" | base64 -d > /tmp/gcp_sa.json
+        env:
+          GCP_SA_JSON: ${{ secrets.GCP_SA_JSON }}
+
+      - name: Run GitHub sync
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GCP_SA_PATH: /tmp/gcp_sa.json
+        run: python scripts/github_sync.py
+
+      - name: Trigger dbt Cloud build
+        run: |
+          curl -s -X POST \
+            "https://nm749.us1.dbt.com/api/v2/accounts/70471823553645/jobs/70471823588201/run/" \
+            -H "Authorization: Token $DBT_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"cause": "github-sync cron"}' \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('dbt run_id:', d.get('data',{}).get('id','error'), d.get('status',''))"
+        env:
+          DBT_API_TOKEN: ${{ secrets.DBT_API_TOKEN }}
