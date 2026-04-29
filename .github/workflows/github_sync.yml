@@ -31,13 +31,5 @@ jobs:
           GCP_SA_PATH: /tmp/gcp_sa.json
         run: python scripts/github_sync.py
 
-      - name: Trigger dbt Cloud build
-        run: |
-          curl -s -X POST \
-            "https://nm749.us1.dbt.com/api/v2/accounts/70471823553645/jobs/70471823588201/run/" \
-            -H "Authorization: Token $DBT_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"cause": "github-sync cron"}' \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); print('dbt run_id:', d.get('data',{}).get('id','error'), d.get('status',''))"
-        env:
-          DBT_API_TOKEN: ${{ secrets.DBT_API_TOKEN }}
+      # dbt trigger removed — dbt is now orchestrated from goatmark/mercury-receipts
+      # dbt-trigger.yml fires at 4:30am and 6:30pm CT after all BQ loads complete
