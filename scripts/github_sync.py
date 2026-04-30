@@ -1,13 +1,12 @@
 """
 GitHub -> BigQuery sync
-Pulls commits, contributor stats, and repo metadata for goatmark repos.
+Pulls commits and repo metadata for goatmark repos.
 Writes to data-warehouse-475122.github dataset.
 Reads config from environment variables for CI use.
 """
 
-import os, sys, json, time, requests
+import os, sys, time, requests
 sys.stdout.reconfigure(encoding='utf-8')
-from datetime import datetime, timezone
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
@@ -92,24 +91,6 @@ REPOS_SCHEMA = [
     bigquery.SchemaField('pushed_at',      'TIMESTAMP'),
 ]
 
-STATS_SCHEMA = [
-    bigquery.SchemaField('repo',            'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('author_login',    'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('total_commits',   'INTEGER'),
-    bigquery.SchemaField('total_additions', 'INTEGER'),
-    bigquery.SchemaField('total_deletions', 'INTEGER'),
-    bigquery.SchemaField('synced_at',       'TIMESTAMP'),
-]
-
-WEEKLY_STATS_SCHEMA = [
-    bigquery.SchemaField('repo',         'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('author_login', 'STRING', mode='REQUIRED'),
-    bigquery.SchemaField('week_start',   'DATE',   mode='REQUIRED'),
-    bigquery.SchemaField('commits',      'INTEGER'),
-    bigquery.SchemaField('additions',    'INTEGER'),
-    bigquery.SchemaField('deletions',    'INTEGER'),
-]
-
 def fetch_commits(repo):
     print(f'  Fetching commits for {repo}...')
     raw = gh_get_all(f'/repos/{repo}/commits', params={'since': START, 'per_page': 100})
@@ -147,77 +128,23 @@ def fetch_repo_meta(repo):
         'pushed_at':      d.get('pushed_at', ''),
     }
 
-def fetch_contributor_stats(repo, max_attempts=20, wait_sec=30):
-    print(f'  Fetching contributor stats for {repo}...')
-    now = datetime.now(timezone.utc).isoformat()
-    url = f'https://api.github.com/repos/{repo}/stats/contributors'
-
-    raw = []
-    for attempt in range(max_attempts):
-        r = requests.get(url, headers=GH_HEADERS)
-        print(f'  Attempt {attempt+1}: status={r.status_code}')
-        if r.status_code == 200:
-            data = r.json()
-            if isinstance(data, list) and data:
-                raw = data
-                break
-        if attempt < max_attempts - 1:
-            time.sleep(wait_sec)
-
-    if not raw:
-        print(f'  Stats not available after {max_attempts} attempts — skipping')
-        return [], []
-
-    summary_rows, weekly_rows = [], []
-    for contributor in raw:
-        login = (contributor.get('author') or {}).get('login', 'unknown')
-        weeks = contributor.get('weeks', [])
-        summary_rows.append({
-            'repo':            repo,
-            'author_login':    login,
-            'total_commits':   sum(w.get('c', 0) for w in weeks),
-            'total_additions': sum(w.get('a', 0) for w in weeks),
-            'total_deletions': sum(w.get('d', 0) for w in weeks),
-            'synced_at':       now,
-        })
-        for w in weeks:
-            if w.get('c', 0) or w.get('a', 0) or w.get('d', 0):
-                week_date = datetime.fromtimestamp(w['w'], tz=timezone.utc).strftime('%Y-%m-%d')
-                weekly_rows.append({
-                    'repo':         repo,
-                    'author_login': login,
-                    'week_start':   week_date,
-                    'commits':      w.get('c', 0),
-                    'additions':    w.get('a', 0),
-                    'deletions':    w.get('d', 0),
-                })
-
-    print(f'  {repo}: {len(summary_rows)} contributors, {len(weekly_rows)} active weeks')
-    return summary_rows, weekly_rows
-
 def main():
     print('=== GitHub -> BigQuery sync ===')
     print(f'Repos: {REPOS}')
     client = bq_client()
 
-    all_commits, all_repo_meta, all_stats_summary, all_stats_weekly = [], [], [], []
+    all_commits, all_repo_meta = [], []
 
     for repo in REPOS:
         print(f'-- {repo} --')
-        repo_commits = fetch_commits(repo)
-        all_commits.extend(repo_commits)
+        all_commits.extend(fetch_commits(repo))
         all_repo_meta.append(fetch_repo_meta(repo))
-        summary, weekly = fetch_contributor_stats(repo)
-        all_stats_summary.extend(summary)
-        all_stats_weekly.extend(weekly)
 
     print('Writing to BigQuery...')
-    upsert_table(client, 'commits_clean',            all_commits,       COMMITS_SCHEMA,      'WRITE_TRUNCATE')
-    upsert_table(client, 'repositories_clean',       all_repo_meta,     REPOS_SCHEMA,        'WRITE_TRUNCATE')
-    upsert_table(client, 'contributor_stats',        all_stats_summary, STATS_SCHEMA,        'WRITE_TRUNCATE')
-    upsert_table(client, 'contributor_stats_weekly', all_stats_weekly,  WEEKLY_STATS_SCHEMA, 'WRITE_TRUNCATE')
+    upsert_table(client, 'commits_clean',      all_commits,   COMMITS_SCHEMA, 'WRITE_TRUNCATE')
+    upsert_table(client, 'repositories_clean', all_repo_meta, REPOS_SCHEMA,   'WRITE_TRUNCATE')
 
-    print(f'Done. commits={len(all_commits)} repos={len(all_repo_meta)} contributors={len(all_stats_summary)}')
+    print(f'Done. commits={len(all_commits)} repos={len(all_repo_meta)}')
 
 if __name__ == '__main__':
     main()
