@@ -2,6 +2,7 @@
     {%- set default_patterns = [
         'atmwithdraw',
         'automaticpayment',
+        'biltcardpmt',
         'chasecard',
         'chasecreditcrd',
         'consumeronline',
