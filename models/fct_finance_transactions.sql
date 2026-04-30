@@ -18,6 +18,7 @@ select
     dashboard_link
 
 from {{ ref('fct_mercury_transactions') }}
+where not is_interaccount
 
 union all
 

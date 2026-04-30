@@ -4,13 +4,6 @@ with src as (
     select * from {{ source('finance', 'mercury_transactions') }}
     where status in ('sent', 'pending')
       and posted_at is not null
-      and (
-        -- Credit card account: exclude only internal account-to-account payment credits
-        (account_id = '1eeebdc0-7891-11f0-b269-471e5e3e0a24'
-         and not regexp_contains(lower(coalesce(counterparty_name, '')), r'mercury checking|mercury savings'))
-        -- Plus cashback/interest from any account
-        or regexp_contains(lower(coalesce(counterparty_name, '')), r'mercury io cashback')
-      )
 )
 
 select
@@ -24,6 +17,10 @@ select
     timestamp(created_at)                         as created_at,
     status,
     case when amount < 0 then 'expense' else 'income' end as direction,
+
+    -- Flag inter-account and card payment transfers — exclude at reporting layer
+    regexp_contains(lower(coalesce(counterparty_name, '')),
+        r'mercury checking|mercury savings|mercury credit|\bbilt\b') as is_interaccount,
 
     -- Vendor normalisation
     case
@@ -41,7 +38,7 @@ select
         else counterparty_name
     end as vendor,
 
-    -- Expense category (mirrors the Finances tab structure)
+    -- Expense category (applied at reporting layer; inter-account rows will be excluded)
     case
         when amount > 0 and regexp_contains(lower(mercury_category), r'interest')            then 'Interest Earned'
         when amount > 0 and regexp_contains(lower(coalesce(counterparty_name, '')), r'mercury io cashback') then 'Cashback & Rewards'
