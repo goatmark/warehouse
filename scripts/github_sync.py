@@ -8,7 +8,6 @@ Reads config from environment variables for CI use.
 import os, sys, json, time, requests
 sys.stdout.reconfigure(encoding='utf-8')
 from datetime import datetime, timezone
-from collections import defaultdict
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
@@ -148,40 +147,50 @@ def fetch_repo_meta(repo):
         'pushed_at':      d.get('pushed_at', ''),
     }
 
-def fetch_contributor_stats(repo, commit_rows):
+def fetch_contributor_stats(repo, max_attempts=20, wait_sec=30):
     print(f'  Fetching contributor stats for {repo}...')
     now = datetime.now(timezone.utc).isoformat()
+    url = f'https://api.github.com/repos/{repo}/stats/contributors'
 
-    contributors = gh_get_all(f'/repos/{repo}/contributors', params={'per_page': 100})
-    summary_rows = []
-    for c in (contributors if isinstance(contributors, list) else []):
+    raw = []
+    for attempt in range(max_attempts):
+        r = requests.get(url, headers=GH_HEADERS)
+        print(f'  Attempt {attempt+1}: status={r.status_code}')
+        if r.status_code == 200:
+            data = r.json()
+            if isinstance(data, list) and data:
+                raw = data
+                break
+        if attempt < max_attempts - 1:
+            time.sleep(wait_sec)
+
+    if not raw:
+        print(f'  Stats not available after {max_attempts} attempts — skipping')
+        return [], []
+
+    summary_rows, weekly_rows = [], []
+    for contributor in raw:
+        login = (contributor.get('author') or {}).get('login', 'unknown')
+        weeks = contributor.get('weeks', [])
         summary_rows.append({
             'repo':            repo,
-            'author_login':    c.get('login', 'unknown'),
-            'total_commits':   c.get('contributions', 0),
-            'total_additions': 0,
-            'total_deletions': 0,
+            'author_login':    login,
+            'total_commits':   sum(w.get('c', 0) for w in weeks),
+            'total_additions': sum(w.get('a', 0) for w in weeks),
+            'total_deletions': sum(w.get('d', 0) for w in weeks),
             'synced_at':       now,
         })
-
-    weekly_map = defaultdict(int)
-    for row in commit_rows:
-        if not row.get('committed_at') or not row.get('author_login'):
-            continue
-        try:
-            import datetime as dt_mod
-            d = datetime.fromisoformat(row['committed_at'].replace('Z', '+00:00'))
-            day_of_week = (d.weekday() + 1) % 7
-            week_start = (d - dt_mod.timedelta(days=day_of_week)).strftime('%Y-%m-%d')
-            weekly_map[(row['author_login'], week_start)] += 1
-        except Exception:
-            pass
-
-    weekly_rows = [
-        {'repo': repo, 'author_login': login, 'week_start': week_start,
-         'commits': count, 'additions': 0, 'deletions': 0}
-        for (login, week_start), count in weekly_map.items()
-    ]
+        for w in weeks:
+            if w.get('c', 0) or w.get('a', 0) or w.get('d', 0):
+                week_date = datetime.fromtimestamp(w['w'], tz=timezone.utc).strftime('%Y-%m-%d')
+                weekly_rows.append({
+                    'repo':         repo,
+                    'author_login': login,
+                    'week_start':   week_date,
+                    'commits':      w.get('c', 0),
+                    'additions':    w.get('a', 0),
+                    'deletions':    w.get('d', 0),
+                })
 
     print(f'  {repo}: {len(summary_rows)} contributors, {len(weekly_rows)} active weeks')
     return summary_rows, weekly_rows
@@ -198,7 +207,7 @@ def main():
         repo_commits = fetch_commits(repo)
         all_commits.extend(repo_commits)
         all_repo_meta.append(fetch_repo_meta(repo))
-        summary, weekly = fetch_contributor_stats(repo, repo_commits)
+        summary, weekly = fetch_contributor_stats(repo)
         all_stats_summary.extend(summary)
         all_stats_weekly.extend(weekly)
 
