@@ -152,6 +152,7 @@ with src as (
                 or mt.description_clean like '%remoteonline%'
                 or mt.description_clean like '%universityofchachdepositppdid%'
                 or mt.description_clean like '%cpctieredoffer%'
+                or mt.description_clean like '%booktransfercredit%'
                 then 'Revenue'
             when mt.description_clean like '%irs%'
              or  mt.description_clean like '%ildeptofrev%'
