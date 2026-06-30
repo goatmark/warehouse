@@ -7,10 +7,7 @@ with src as (
        , src.db_id                                  as db_id
        , src.page_id                                as page_id
        , src.title                                  as title
-       , array(
-           select float64(elem)
-           from unnest(json_query_array(src.embedding)) as elem
-         )                                          as embedding
+       , src.embedding                               as embedding
        , src.created_at                             as created_at
        , src.snippet                                as snippet
     from
