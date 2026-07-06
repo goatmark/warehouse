@@ -62,6 +62,11 @@ sources:
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
+      # ingredients_clean / ingredient_amounts: ported from the retired
+      # run_personal_models.py legacy script (2026-07-06) — no freshness
+      # config yet, unverified sync cadence.
+      - name: ingredients_clean
+      - name: ingredient_amounts
 
   - name: finance_personal
     database: data-warehouse-475122
