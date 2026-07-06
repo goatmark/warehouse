@@ -1,0 +1,17 @@
+version: 2
+
+# New raw GitHub coding-activity source, loaded by
+# scripts/github_activity_sync.py into the data_github dataset.
+# Kept separate from the legacy `github` source (commits_clean) so the
+# existing dbt models are untouched.
+sources:
+  - name: data_github
+    database: data-warehouse-475122
+    schema: data_github
+    tables:
+      - name: commits
+        config:
+          loaded_at_field: synced_at
+      - name: repositories
+        config:
+          loaded_at_field: synced_at
