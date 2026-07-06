@@ -1,24 +1,29 @@
 {{ config(materialized='table') }}
 
 with src as (
-    select * from {{ source('finance', 'mercury_transactions') }}
-    where status in ('sent', 'pending')
-      and posted_at is not null
+    -- Zero-drop: every raw transaction reaches this table. Failed/pending/
+    -- interaccount rows are flagged, not filtered, so reporting layers choose
+    -- explicitly what to exclude instead of losing rows silently upstream.
+    select *, coalesce(timestamp(posted_at), timestamp(created_at)) as effective_at
+    from {{ source('finance', 'mercury_transactions') }}
 )
 
 select
     transaction_id,
     amount,
-    timestamp(posted_at)                          as posted_at,
-    date(timestamp(posted_at))                    as posted_date,
-    format_date('%Y-%m', date(timestamp(posted_at))) as year_month,
-    extract(year  from timestamp(posted_at))      as year,
-    extract(month from timestamp(posted_at))      as month,
+    effective_at                                  as posted_at,
+    date(effective_at)                            as posted_date,
+    format_date('%Y-%m', date(effective_at))      as year_month,
+    extract(year  from effective_at)               as year,
+    extract(month from effective_at)               as month,
     timestamp(created_at)                         as created_at,
     status,
     case when amount < 0 then 'expense' else 'income' end as direction,
 
-    -- Flag inter-account and card payment transfers — exclude at reporting layer
+    status = 'failed'  as is_failed,
+    status = 'pending' as is_pending,
+
+    -- Flag inter-account and card payment transfers — excluded at reporting layer
     regexp_contains(lower(coalesce(counterparty_name, '')),
         r'mercury checking|mercury savings|mercury credit|\bbilt\b') as is_interaccount,
 
