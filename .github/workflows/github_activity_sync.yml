@@ -1,0 +1,38 @@
+name: GitHub Activity -> BigQuery (data_github)
+
+# Additive to the legacy github_sync.yml workflow. Loads full coding
+# activity (commits + per-commit line stats + repo dimension) for all
+# owned repos into the data_github dataset. Incremental: only new commit
+# SHAs are fetched each run.
+
+on:
+  schedule:
+    - cron: '30 6 * * *'   # Daily at 6:30am UTC (after legacy sync)
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests google-cloud-bigquery google-auth
+
+      - name: Write GCP credentials
+        run: echo "$GCP_SA_JSON" | base64 -d > /tmp/gcp_sa.json
+        env:
+          GCP_SA_JSON: ${{ secrets.GCP_SA_JSON }}
+
+      - name: Run GitHub activity sync
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GCP_SA_PATH: /tmp/gcp_sa.json
+          GH_OWNER: goatmark
+        run: python scripts/github_activity_sync.py
