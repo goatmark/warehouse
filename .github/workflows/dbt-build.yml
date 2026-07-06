@@ -1,0 +1,47 @@
+name: dbt build (dwh)
+
+on:
+  schedule:
+    - cron: "30 9 * * *"    # 4:30am CT — after the data_* ingestion loads land
+    - cron: "30 23 * * *"   # 6:30pm CT
+  workflow_dispatch:
+  repository_dispatch:
+    types: [dbt-build]
+
+concurrency:
+  group: dbt-build
+  cancel-in-progress: false
+
+jobs:
+  dbt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install dbt-bigquery
+      - name: Write GCP credentials
+        env:
+          GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
+        run: echo "$GCP_DWH_CREDENTIALS_JSON" > /tmp/gcp_dwh.json
+      - name: Write dbt profile
+        run: |
+          cat > profiles.yml <<'PROF'
+          default:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: service-account
+                project: data-warehouse-475122
+                dataset: dwh_reporting
+                keyfile: /tmp/gcp_dwh.json
+                location: US
+                threads: 4
+                job_execution_timeout_seconds: 600
+                job_retries: 1
+          PROF
+      - run: dbt build --profiles-dir . --project-dir .
