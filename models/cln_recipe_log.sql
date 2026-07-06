@@ -11,7 +11,7 @@ with src as (
         , cast(Plants as string)    as plants
         , cast(Cost as numeric)     as cost
     from
-        {{source('warehouse', 'recipe_log')}}
+        {{source('life', 'recipe_log')}}
     where
         1=1
 )
@@ -46,4 +46,4 @@ select
 from
     cleaned_data as cd
 where
-    1=1
+    1=1

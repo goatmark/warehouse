@@ -17,7 +17,7 @@ with src as (
         , safe_cast(intermediate_key as string) as intermediate_key
         , lower(cast(description as string))    as description_lower
     from
-        {{source('warehouse', 'card_transactions')}}
+        {{source('finance_personal', 'card_transactions')}}
     where
         1=1
 ) 
@@ -74,7 +74,7 @@ with src as (
         , tm.merchant_key
         , count(*) as hits
     from
-        {{ source('warehouse', 'transaction_merchant_maps') }} as tm
+        {{ source('finance_personal', 'transaction_merchant_maps') }} as tm
     join src as s
         on s.transaction_key = tm.transaction_key
     group by
@@ -117,7 +117,7 @@ with src as (
         , dmt.merchant_key merchant_key_assigned
     from
         classified_transactions as ct
-    left join {{ source('warehouse', 'transaction_merchant_maps') }} as map
+    left join {{ source('finance_personal', 'transaction_merchant_maps') }} as map
         on map.transaction_key = ct.transaction_key
     left join desc_merchant_top as dmt
         on substr(regexp_replace(lower(ct.description), '[^a-z]+', ''), 1, 15) = dmt.norm15
@@ -185,8 +185,25 @@ select
     -- dimensions
     , t.date
     , t.merchant
-    , t.transaction_type
-    , t.category_name as category
+
+    -- ATM cash withdrawals -> "Petty Cash" expense.
+    -- (Replaces the retired dispensary email-classification pipeline: ATM
+    --  cash pulls are now booked as a Petty Cash expense rather than left
+    --  in whatever merchant category / type they inherited.)
+    , case
+        when t.description_lower like '%atm withdraw%'      -- covers "ATM WITHDRAWAL"
+          or t.description_lower like '%atm withdrawal%'
+          or t.description_lower like '%non-chase atm%'
+            then 'Expense'
+        else t.transaction_type
+      end as transaction_type
+    , case
+        when t.description_lower like '%atm withdraw%'
+          or t.description_lower like '%atm withdrawal%'
+          or t.description_lower like '%non-chase atm%'
+            then 'Petty Cash'
+        else t.category_name
+      end as category
     , t.subcategory_name as subcategory
     , t.description
     , t.is_interaccount
@@ -213,4 +230,4 @@ from
 where
     1=1
 order by
-    t.date desc
+    t.date desc

@@ -1,73 +1,47 @@
 version: 2
+
+# Target-state raw layer: models read from the new data_* datasets.
+# The former single `warehouse` source (which fed BOTH life tables and
+# personal-finance tables) is split into `life` (-> data_life) and
+# `finance_personal` (-> data_finance_personal). Website tables move to
+# `website` (-> data_website). Business finance -> data_finance_business.
 sources:
-  - name: warehouse
+  - name: life
     database: data-warehouse-475122
-    schema: warehouse
+    schema: data_life
+    tables:
+      - name: exercises
+      - name: exercise_log
+      - name: exercise_muscles
+      - name: exercise_loads
+      - name: recipe_log
+      - name: recipes
+      - name: shopping_log
+      - name: weights
+
+  - name: finance_personal
+    database: data-warehouse-475122
+    schema: data_finance_personal
     tables:
       - name: card_transactions
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: exercise_log
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: exercises
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: exercise_muscles
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: exercise_loads
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: recipe_log
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: recipes
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: shopping_log
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: users
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: weights
-        config:
-          loaded_at_field: _airbyte_extracted_at
       - name: merchants
-        config:
-          loaded_at_field: _airbyte_extracted_at
       - name: transaction_merchant_maps
-        config:
-          loaded_at_field: _airbyte_extracted_at
       - name: subcategories
-        config:
-          loaded_at_field: _airbyte_extracted_at
       - name: categories
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: blog_posts
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: email_settings
-        config:
-          loaded_at_field: _airbyte_extracted_at
-      - name: priorities
-        config:
-          loaded_at_field: _airbyte_extracted_at
+
+  - name: website
+    database: data-warehouse-475122
+    schema: data_website
+    tables:
       - name: notion_embeddings
-        config:
-          loaded_at_field: _airbyte_extracted_at
+      - name: blog_posts
+      - name: email_settings
+      - name: priorities
+      - name: users
+
   - name: finance
     database: data-warehouse-475122
-    schema: finance
+    schema: data_finance_business
     tables:
       - name: mercury_transactions
-        config:
-          loaded_at_field: loaded_at
       - name: notion_transactions
-  - name: github
-    database: data-warehouse-475122
-    schema: github
-    tables:
-      - name: commits_clean

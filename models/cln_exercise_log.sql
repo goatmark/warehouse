@@ -21,7 +21,7 @@ with src as (
         , cast(Area_Multiplier as numeric)      as area_multiplier
         , cast(Load_Multiplier_Method as string)as load_multiplier_method
     from
-        {{source('warehouse', 'exercise_log')}}
+        {{source('life', 'exercise_log')}}
     where
         1=1
 )
@@ -51,7 +51,7 @@ with src as (
         w.measurement_date as date
         , avg(w.weight) as weight
     from
-        {{source('warehouse', 'weights')}} as w
+        {{source('life', 'weights')}} as w
     where
         1=1
     group by
@@ -134,4 +134,4 @@ select
 from
     cleaned_data
 where
-    1=1
+    1=1

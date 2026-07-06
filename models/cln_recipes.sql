@@ -16,7 +16,7 @@ with src as (
         , cast(created_at as timestamp)         as created_at
         , cast(updated_at as timestamp)         as updated_at
     from
-        {{source('warehouse', 'recipes')}} as src
+        {{source('life', 'recipes')}} as src
     where
         1=1
 )
@@ -102,4 +102,4 @@ left join new_plants_per_dish nppd on
 where
     1=1
 order by
-    new_plants desc nulls last
+    new_plants desc nulls last

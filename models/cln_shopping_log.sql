@@ -10,7 +10,7 @@ with src as (
         , cast(Quantity as numeric)     as quantity
         , cast(Ingredient as string)    as item
     from
-        {{source('warehouse', 'shopping_log')}}
+        {{source('life', 'shopping_log')}}
     where
         1=1
 )

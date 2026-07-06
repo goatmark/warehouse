@@ -10,7 +10,7 @@ with src as (
         , cast(src.load_multiplier_method as string)    as method
         , cast(src.max_weight__lbs_ as numeric)         as max_weight_lbs  
     from
-        {{source('warehouse', 'exercises')}} as src
+        {{source('life', 'exercises')}} as src
     where
         1=1 
 )
@@ -22,7 +22,7 @@ with src as (
         , cast(muscle_name as string) as muscle_name
         , cast(weight as numeric) as weight
     from 
-        {{ source('warehouse', 'exercise_loads') }}
+        {{ source('life', 'exercise_loads') }}
     where 
         1=1
         and exercise_name is not null
@@ -68,4 +68,4 @@ select
 from
     src
 left join final_agg on
-    src.exercise_name = final_agg.exercise_name
+    src.exercise_name = final_agg.exercise_name

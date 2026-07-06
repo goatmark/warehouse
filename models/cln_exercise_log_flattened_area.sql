@@ -23,9 +23,9 @@ with src_flattened as (
         , src.exercise_label_lower
     from
         {{ref('cln_exercise_log')}} as src
-    left join {{source('warehouse', 'exercise_loads')}} as el on
+    left join {{source('life', 'exercise_loads')}} as el on
         src.exercise_label = el.exercise_name
-    left join {{source('warehouse', 'exercise_muscles')}} as em on
+    left join {{source('life', 'exercise_muscles')}} as em on
         em.name = el.muscle_name
     where 
         1=1
@@ -38,4 +38,4 @@ select
 from
     src_flattened as src
 where
-    1=1
+    1=1

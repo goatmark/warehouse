@@ -22,3 +22,26 @@ snapshot-paths: ["snapshots"]
 target-path: "target"  # directory which will store compiled SQL files
 clean-targets:         # directories to be removed by `dbt clean`
   - "target"
+
+# 3-way schema routing (see macros/generate_schema_name.sql).
+# Default target schema is dwh_reporting; the models below are pinned to
+# dedicated finance datasets. Everything else lands in dwh_reporting.
+models:
+  my_new_project:
+    +schema: dwh_reporting
+    # Business finance facts -> dwh_finance_business
+    fct_mercury_transactions:
+      +schema: dwh_finance_business
+    fct_mercury_p_and_l:
+      +schema: dwh_finance_business
+    fct_mercury_missing_receipts:
+      +schema: dwh_finance_business
+    fct_finance_transactions:
+      +schema: dwh_finance_business
+    fct_finance_p_and_l:
+      +schema: dwh_finance_business
+    # Personal card/merchant cleaning models -> dwh_finance_personal
+    cln_card_transactions:
+      +schema: dwh_finance_personal
+    cln_merchants:
+      +schema: dwh_finance_personal

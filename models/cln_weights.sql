@@ -10,7 +10,7 @@ with src as (
         , cast(Lean_Body_Mass as numeric)   as lean_body_mass
         , cast(BMI as numeric)              as bmi
     from
-        {{source('warehouse', 'weights')}}
+        {{source('life', 'weights')}}
     where
         1=1
 )
@@ -34,4 +34,4 @@ select
 from
     cleaned_data
 where
-    1=1
+    1=1

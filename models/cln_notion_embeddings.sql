@@ -11,7 +11,7 @@ with src as (
        , src.created_at                             as created_at
        , src.snippet                                as snippet
     from
-        {{source('warehouse', 'notion_embeddings')}} as src
+        {{source('website', 'notion_embeddings')}} as src
     where
         1=1
         and src.db_id != 'befcd97e-4ea2-4731-ac28-a4faab5e8959'
@@ -20,4 +20,4 @@ with src as (
 select
     *
 from
-    src
+    src
