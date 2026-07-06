@@ -2,8 +2,7 @@ name: dbt build (dwh)
 
 on:
   schedule:
-    - cron: "30 9 * * *"    # 4:30am CT — after the data_* ingestion loads land
-    - cron: "30 23 * * *"   # 6:30pm CT
+    - cron: "30 */2 * * *"   # every 2 hours at :30 — 30 min after the 2-hourly ingestion so data lands first
   workflow_dispatch:
   repository_dispatch:
     types: [dbt-build]
@@ -43,4 +42,65 @@ jobs:
                 job_execution_timeout_seconds: 600
                 job_retries: 1
           PROF
-      - run: dbt build --profiles-dir . --project-dir .
+      # --- Source freshness (Tiller / Supabase sync safety net) ---
+      # Runs BEFORE build so a stalled rolling source (e.g. card_transactions)
+      # is surfaced loudly. continue-on-error keeps the build going; the exit
+      # code is captured and re-checked at the end so a stale source turns the
+      # whole run red (visible) without blocking the build of everything else.
+      - name: dbt source freshness
+        id: freshness
+        continue-on-error: true
+        run: |
+          set +e
+          dbt source freshness --profiles-dir . --project-dir . 2>&1 | tee freshness.log
+          code=${PIPESTATUS[0]}
+          echo "freshness_exit=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -ne 0 ]; then
+            echo "::warning title=Source freshness::One or more rolling sources are STALE (dbt source freshness exit=$code). Possible Tiller/Supabase sync stall — see freshness.log above."
+          else
+            echo "All monitored sources are fresh."
+          fi
+          exit 0
+
+      # --- Build (timed) ---
+      - name: dbt build (timed)
+        run: |
+          start=$(date +%s)
+          echo "dbt build started:  $(date -u +%FT%TZ)"
+          dbt build --profiles-dir . --project-dir .
+          rc=$?
+          end=$(date +%s)
+          dur=$((end - start))
+          echo "dbt build finished: $(date -u +%FT%TZ)"
+          echo "TOTAL_BUILD_SECONDS=$dur"
+          echo "::notice title=dbt build duration::Total dbt build time: ${dur}s"
+          echo "## dbt build duration: ${dur}s" >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
+
+      # --- Lineage / DAG ---
+      - name: dbt docs generate (lineage)
+        if: always()
+        continue-on-error: true
+        run: dbt docs generate --profiles-dir . --project-dir .
+
+      - name: Upload dbt lineage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-lineage
+          path: |
+            target/manifest.json
+            target/catalog.json
+            target/index.html
+          if-no-files-found: warn
+
+      # --- Make a stale source a visibly failed run (after build + lineage) ---
+      - name: Flag stale sources
+        if: always()
+        run: |
+          if [ "${{ steps.freshness.outputs.freshness_exit }}" != "0" ]; then
+            echo "::error title=Stale source detected::dbt source freshness exit=${{ steps.freshness.outputs.freshness_exit }} — a rolling source (e.g. card_transactions / Tiller path or mercury_transactions) is stale. Build and lineage still completed."
+            echo "## STALE SOURCE DETECTED (freshness exit=${{ steps.freshness.outputs.freshness_exit }})" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "All monitored sources fresh."
