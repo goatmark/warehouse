@@ -1,8 +1,5 @@
 
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
-name: 'my_new_project'
+name: 'warehouse'
 version: '1.0.0'
 config-version: 2
 
@@ -26,20 +23,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 # 3-way schema routing (see macros/generate_schema_name.sql).
 # Default target schema is dwh_reporting; the models below are pinned to
 # dedicated finance datasets. Everything else lands in dwh_reporting.
+# Business finance (fct_mercury_*, fct_finance_*) retired 2026-07-12: superseded
+# by the accounting dataset (goatmark/ledger double-entry system).
 models:
-  my_new_project:
+  warehouse:
     +schema: dwh_reporting
-    # Business finance facts -> dwh_finance_business
-    fct_mercury_transactions:
-      +schema: dwh_finance_business
-    fct_mercury_p_and_l:
-      +schema: dwh_finance_business
-    fct_mercury_missing_receipts:
-      +schema: dwh_finance_business
-    fct_finance_transactions:
-      +schema: dwh_finance_business
-    fct_finance_p_and_l:
-      +schema: dwh_finance_business
     # Personal card/merchant cleaning models -> dwh_finance_personal
     cln_card_transactions:
       +schema: dwh_finance_personal
