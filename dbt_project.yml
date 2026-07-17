@@ -33,3 +33,7 @@ models:
       +schema: dwh_finance_personal
     cln_merchants:
       +schema: dwh_finance_personal
+    # LLM token cost tracking
+    fct_llm_usage_daily:
+      +schema: data_finance_business
+    # Reporting models stay in dwh_reporting (the default)
