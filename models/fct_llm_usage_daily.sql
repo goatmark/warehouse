@@ -54,10 +54,10 @@ oai_agg AS (
 ),
 receipts AS (
   SELECT
-    d, vendor, NULL AS model,
+    d, vendor, CAST(NULL AS STRING) AS model,
     0 AS prompt_tokens, 0 AS completion_tokens, 0 AS total_tokens,
     0 AS cached_tokens, 0 AS cache_creation_tokens,
-    total AS cost, NULL AS requests, FALSE AS has_token_data, 'receipt' AS source
+    total AS cost, CAST(NULL AS INT64) AS requests, FALSE AS has_token_data, 'receipt' AS source
   FROM `data-warehouse-475122.data_finance_business.fct_llm_receipts`
 )
 
