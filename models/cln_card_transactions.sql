@@ -44,7 +44,7 @@ with src as (
             when s.type_raw is not null then s.type_raw
             when s.card_last4 not in ({{ var('payment_card_last4_list', [3221,4245,5083,6823]) | join(',') }})
                 then 'Payment'
-            when {{ payments_type_keyword_match('s.description') }} 
+            when {{ payments_type_keyword_match('s.description_lower') }} 
                 then 'Payment'
             else 'Sale'
         end as type
@@ -143,18 +143,15 @@ with src as (
             when   mt.description_clean like '%chicagoventures%' 
                 or mt.description_clean like '%depositid%'
                 or mt.description_clean like '%facebookconsumer%'
-                or mt.description_clean like '%fedwire%'
                 or mt.description_clean like '%fresha%'
-                or mt.description_clean like '%interestdebit%'
                 or mt.description_clean like '%interestpayment%'
                 or mt.description_clean like '%tegus%'
                 or mt.description_clean like '%checkxxxx%'
                 or mt.description_clean like '%remoteonline%'
                 or mt.description_clean like '%universityofchachdepositppdid%'
                 or mt.description_clean like '%cpctieredoffer%'
-                or mt.description_clean like '%booktransfercredit%'
                 then 'Revenue'
-            when mt.description_clean like '%irs%'
+            when regexp_contains(mt.description_lower, r'\birs\b')
              or  mt.description_clean like '%ildeptofrev%'
              or  mt.description_clean like '%ildepofrev%'
                 then 'Tax - US'
