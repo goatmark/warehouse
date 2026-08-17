@@ -183,24 +183,14 @@ select
     , t.date
     , t.merchant
 
-    -- ATM cash withdrawals -> "Petty Cash" expense.
-    -- (Replaces the retired dispensary email-classification pipeline: ATM
-    --  cash pulls are now booked as a Petty Cash expense rather than left
-    --  in whatever merchant category / type they inherited.)
-    , case
-        when t.description_lower like '%atm withdraw%'      -- covers "ATM WITHDRAWAL"
-          or t.description_lower like '%atm withdrawal%'
-          or t.description_lower like '%non-chase atm%'
-            then 'Expense'
-        else t.transaction_type
-      end as transaction_type
-    , case
-        when t.description_lower like '%atm withdraw%'
-          or t.description_lower like '%atm withdrawal%'
-          or t.description_lower like '%non-chase atm%'
-            then 'Petty Cash'
-        else t.category_name
-      end as category
+    -- ATM cash withdrawals are now mapped to the `atm_cash` merchant
+    -- (Government & Financial Services > Cash & ATM) in the Supabase
+    -- merchant taxonomy. The old hardcoded "Petty Cash" override and
+    -- the atmwithdraw/withdrawal interaccount patterns have been removed
+    -- so ATM withdrawals flow through the same merchant-taxonomy pipeline
+    -- as every other transaction.
+    , t.transaction_type
+    , t.category_name as category
     , t.subcategory_name as subcategory
     , t.description
     , t.is_interaccount

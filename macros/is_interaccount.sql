@@ -1,6 +1,5 @@
 {% macro is_interaccount(col) %}
     {%- set default_patterns = [
-        'atmwithdraw',
         'automaticpayment',
         'biltcardpmt',
         'booktransfercredit',
@@ -26,7 +25,6 @@
         'robinhood',
         'stardata',
         'transferfromcd',
-        'withdrawal',
         'venmocash',
         'venmopay',
         'wellsfargo',
