@@ -1,6 +1,8 @@
 name: dbt build (dwh)
 
 on:
+  schedule:
+    - cron: "30 */2 * * *"   # every 2 hours at :30 — 30 min after the 2-hourly ingestion so data lands first
   workflow_dispatch:
   repository_dispatch:
     types: [dbt-build]
@@ -17,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - run: pip install dbt-bigquery
       - name: Write GCP credentials
         env:
