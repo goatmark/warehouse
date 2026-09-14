@@ -1,11 +1,23 @@
 {{ config(materialized='table', schema='data_finance_business') }}
 
-WITH or_dedup AS (
+WITH or_raw AS (
+  -- Aggregate loads only (platform='openrouter_api', set by
+  -- openrouter_backfill.py). Per-request rows from the agent token-logger are
+  -- excluded: they are a subset of the same key's daily aggregate and were
+  -- double-counting every day the logger ran.
+  SELECT * FROM `data-warehouse-475122.data_finance_business.fct_openrouter_requests`
+  WHERE platform = 'openrouter_api' AND generation_id IS NULL
+),
+or_dedup AS (
+  -- OpenRouter's analytics settle late: a day fetched at 06:00 can be partial
+  -- (missing models) and complete only 24-48h later. The backfill re-fetches a
+  -- rolling window, so keep ONLY the newest load per (day, model); older
+  -- partial loads of the same day are superseded, not summed.
   SELECT *, ROW_NUMBER() OVER (
-    PARTITION BY DATE(ts), model, ts, prompt_tokens, completion_tokens
+    PARTITION BY DATE(ts), model
     ORDER BY loaded_at DESC
   ) AS rn
-  FROM `data-warehouse-475122.data_finance_business.fct_openrouter_requests`
+  FROM or_raw
 ),
 ant_dedup AS (
   SELECT *, ROW_NUMBER() OVER (
