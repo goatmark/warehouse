@@ -36,10 +36,21 @@ sources:
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
-      # exercise_muscles: static-in-practice (last synced 2026-04-29) — no freshness
+      # exercise_muscles / exercise_loads: synced via GHA personal-sync (3x daily).
+      # Previously stale (Airbyte era, last 2026-04-29) because RLS blocked the anon
+      # key. Fixed 2026-09-29: SUPABASE_KEY GHA secret switched to service role key.
       - name: exercise_muscles
-      # exercise_loads: static-in-practice (last synced 2026-04-29) — no freshness
+        config:
+          loaded_at_field: synced_at
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 30, period: hour}
       - name: exercise_loads
+        config:
+          loaded_at_field: synced_at
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 30, period: hour}
       - name: recipe_log
         config:
           loaded_at_field: synced_at
