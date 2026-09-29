@@ -6,13 +6,15 @@ version: 2
 # `finance_personal` (-> data_finance_personal). Website tables move to
 # `website` (-> data_website). Business finance -> data_finance_business.
 #
-# Source freshness (Tiller / Supabase sync safety net)
+# Source freshness (Supabase sync safety net)
 # ----------------------------------------------------
-# Ingestion runs every 2h and stamps `_airbyte_extracted_at` (full reload,
-# so max(_airbyte_extracted_at) == last successful sync time for the table).
-# mercury_transactions has no `_airbyte_extracted_at`; it uses its own
+# personal-sync.mjs (goatmark/jarvis, GitHub Actions) runs 3x daily at
+# 09:00, 17:00, 23:00 UTC and stamps `synced_at` (full reload via
+# WRITE_TRUNCATE, so max(synced_at) == last successful sync time).
+# website-sync.mjs syncs data_website tables on the same cadence.
+# mercury_transactions has no `synced_at`; it uses its own
 # purpose-built `loaded_at` TIMESTAMP instead.
-# freshness thresholds: warn after 12h (6 missed 2h cycles), error after 30h.
+# freshness thresholds: warn after 12h, error after 30h.
 # NOT added to intentionally-static lookup tables (categories, subcategories)
 # nor to tables that are static-in-practice / not currently resynced
 # (exercise_muscles, exercise_loads, blog_posts) — those would false-alarm.
@@ -23,14 +25,14 @@ sources:
     tables:
       - name: exercises
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       # exercise_log / recipe_log / shopping_log / weights: rolling activity logs
       - name: exercise_log
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
@@ -40,25 +42,25 @@ sources:
       - name: exercise_loads
       - name: recipe_log
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: recipes
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: shopping_log
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: weights
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
@@ -76,19 +78,19 @@ sources:
       # This is the highest-priority freshness check (silent stall risk).
       - name: card_transactions
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: merchants
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: transaction_merchant_maps
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
@@ -102,7 +104,7 @@ sources:
     tables:
       - name: notion_embeddings
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
@@ -110,19 +112,19 @@ sources:
       - name: blog_posts
       - name: email_settings
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: priorities
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
       - name: users
         config:
-          loaded_at_field: _airbyte_extracted_at
+          loaded_at_field: synced_at
           freshness:
             warn_after: {count: 12, period: hour}
             error_after: {count: 30, period: hour}
@@ -131,7 +133,7 @@ sources:
     database: data-warehouse-475122
     schema: data_finance_business
     tables:
-      # mercury_transactions has no _airbyte_extracted_at; use its own load stamp.
+      # mercury_transactions has no synced_at; use its own load stamp.
       - name: mercury_transactions
         config:
           loaded_at_field: loaded_at
