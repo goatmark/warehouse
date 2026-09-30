@@ -4,6 +4,10 @@ name: GitHub Activity -> BigQuery (data_github)
 # activity (commits + per-commit line stats + repo dimension) for all
 # owned repos into the data_github dataset. Incremental: only new commit
 # SHAs are fetched each run.
+#
+# Syncs BOTH GitHub accounts Mark owns: goatmark (BibleTimes + personal)
+# and prepsavvy (the dedicated PrepSavvy account). The venture dimension
+# is derived downstream in cln_github_activity from the repo owner/name.
 
 on:
   schedule:
@@ -32,7 +36,8 @@ jobs:
 
       - name: Run GitHub activity sync
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+          GH_OWNERS: 'goatmark,prepsavvy'
+          GH_PAT_GOATMARK: ${{ secrets.GH_PAT }}
+          GH_PAT_PREPSAVVY: ${{ secrets.PS_GH_PAT }}
           GCP_SA_PATH: /tmp/gcp_sa.json
-          GH_OWNER: goatmark
         run: python scripts/github_activity_sync.py

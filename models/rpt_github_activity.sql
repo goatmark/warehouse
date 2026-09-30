@@ -1,19 +1,22 @@
 -- rpt_github_activity.sql
--- Coding-activity reporting model: repo x day grain, owner commits only.
--- Roll up downstream for weekly / monthly / per-repo totals and
--- most-active-repo reporting. Materialized into the dwh_reporting dataset.
+-- Coding-activity reporting model: venture x repo x day grain, Mark's
+-- commits only (both goatmark + prepsavvy accounts). Carries the venture
+-- dimension so downstream rollups can break activity out by venture.
+-- Materialized into the dwh_reporting dataset.
 {{ config(materialized='table', schema='dwh_reporting') }}
 
 with commits as (
     select *
     from {{ ref('cln_github_activity') }}
-    where is_owner = true
+    where is_mark = true
 )
 
 , daily as (
     select
-        repo
+        venture
+        , repo
         , repo_name
+        , repo_owner
         , committed_date
         , committed_week
         , committed_month
@@ -25,12 +28,14 @@ with commits as (
     from
         commits
     group by
-        1, 2, 3, 4, 5
+        1, 2, 3, 4, 5, 6, 7
 )
 
 select
-    repo
+    venture
+    , repo
     , repo_name
+    , repo_owner
     , committed_date
     , committed_week
     , committed_month

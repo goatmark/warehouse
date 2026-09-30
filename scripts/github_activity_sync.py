@@ -13,10 +13,13 @@ Improves on scripts/github_sync.py:
   * Rate-limit aware: stops gracefully and reports what is left to backfill.
 
 Env:
-  GH_PAT        GitHub token (repo read scope)
   GCP_SA_PATH   path to GCP service-account JSON
+  GH_OWNERS     comma-separated GitHub owner logins to sync (default: goatmark)
+  GH_PAT_<OWNER_UPPER>
+                per-owner GitHub token (repo read scope). Falls back to GH_PAT
+                for any owner without a dedicated token, so the original
+                single-token (GH_PAT + GH_OWNER) path still works.
 Optional:
-  GH_OWNER      default 'goatmark'
   GH_SINCE      ISO start date for first backfill, default 2015-01-01
 """
 
@@ -25,23 +28,37 @@ sys.stdout.reconfigure(encoding='utf-8')
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
-GITHUB_TOKEN = os.environ['GH_PAT']
 GCP_SA_PATH  = os.environ['GCP_SA_PATH']
-OWNER        = os.environ.get('GH_OWNER', 'goatmark')
 PROJECT      = 'data-warehouse-475122'
 DATASET      = 'data_github'
 START        = os.environ.get('GH_SINCE', '2015-01-01T00:00:00Z')
 RL_FLOOR     = 60   # stop fetching commit detail when core budget drops below this
 
-GH_HEADERS = {
-    'Authorization': f'Bearer {GITHUB_TOKEN}',
-    'Accept': 'application/vnd.github.v3+json',
-    'X-GitHub-Api-Version': '2022-11-28',
-}
+# Owners to sync. GH_OWNERS (comma list) takes precedence; falls back to the
+# legacy single GH_OWNER env var; finally defaults to ['goatmark'].
+_default_owners = os.environ.get('GH_OWNERS') or os.environ.get('GH_OWNER') or 'goatmark'
+OWNERS = [o.strip() for o in _default_owners.split(',') if o.strip()]
 
 _session = requests.Session()
-_session.headers.update(GH_HEADERS)
+_session.headers.update({
+    'Accept': 'application/vnd.github.v3+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+})
 _last_remaining = None
+
+
+def token_for(owner):
+    """Per-owner GitHub token: GH_PAT_<OWNER_UPPER> if set, else GH_PAT."""
+    v = os.environ.get(f'GH_PAT_{owner.upper()}') or os.environ.get('GH_PAT')
+    if not v:
+        raise SystemExit(
+            f'No GitHub token for owner {owner} '
+            f'(set GH_PAT_{owner.upper()} or GH_PAT)')
+    return v
+
+
+def configure_auth(token):
+    _session.headers['Authorization'] = f'Bearer {token}'
 
 
 def gh_get(path, params=None):
@@ -171,12 +188,12 @@ def existing_shas(client):
 
 
 # ---------------------------------------------------------------- GitHub fetch
-def list_owned_repos():
+def list_owned_repos(owner):
     repos = gh_get_all('/user/repos',
                        params={'affiliation': 'owner', 'per_page': 100, 'sort': 'pushed'})
     keep = []
     for d in repos:
-        if d.get('owner', {}).get('login', '').lower() != OWNER.lower():
+        if d.get('owner', {}).get('login', '').lower() != owner.lower():
             continue
         if d.get('archived') or d.get('fork') or d.get('size', 0) == 0:
             continue
@@ -242,43 +259,48 @@ def fetch_new_commit_rows(repo, have_shas, now, stop):
 def main():
     now = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     print('=== GitHub coding-activity -> BigQuery (data_github) ===')
+    print(f'Owners: {", ".join(OWNERS)}')
     client = bq_client()
     ensure_dataset(client)
 
     have = existing_shas(client)
-    repos = list_owned_repos()
-    print(f'Owned repos to sync: {len(repos)} (core budget remaining {rl_remaining()})')
-
-    all_commits, repo_rows = [], []
+    repo_rows = []
     stop = {'hit': False}
     incomplete = []
 
-    for d in repos:
-        repo = d['full_name']
-        repo_rows.append(repo_meta_row(d, now))
-        if stop['hit']:
-            incomplete.append(repo + ' (not started)')
-            continue
-        rows, n_listed, n_new, n_fetched = fetch_new_commit_rows(
-            repo, have.get(repo, set()), now, stop)
-        all_commits.extend(rows)
-        tag = ''
-        if n_new != n_fetched:
-            tag = f'  !! {n_new - n_fetched} remaining (rate limit)'
-            incomplete.append(f'{repo} ({n_new - n_fetched} commits left)')
-        print(f'  {repo}: listed={n_listed} new={n_new} fetched={n_fetched} '
-              f'rl={rl_remaining()}{tag}')
+    for owner in OWNERS:
+        configure_auth(token_for(owner))
+        repos = list_owned_repos(owner)
+        print(f'[{owner}] owned repos to sync: {len(repos)} '
+              f'(core budget remaining {rl_remaining()})', flush=True)
+        for d in repos:
+            repo = d['full_name']
+            repo_rows.append(repo_meta_row(d, now))
+            if stop['hit']:
+                incomplete.append(repo + ' (not started)')
+                continue
+            rows, n_listed, n_new, n_fetched = fetch_new_commit_rows(
+                repo, have.get(repo, set()), now, stop)
+            # Write per-repo so progress survives an interrupt; dedup by
+            # (repo, sha) upstream makes this append-only and resumable.
+            load_rows(client, 'commits', rows, COMMITS_SCHEMA, 'WRITE_APPEND')
+            tag = ''
+            if n_new != n_fetched:
+                tag = f'  !! {n_new - n_fetched} remaining (rate limit)'
+                incomplete.append(f'{repo} ({n_new - n_fetched} commits left)')
+            print(f'  {repo}: listed={n_listed} new={n_new} fetched={n_fetched} '
+                  f'rl={rl_remaining()}{tag}', flush=True)
 
-    print('Writing BigQuery...')
-    load_rows(client, 'commits', all_commits, COMMITS_SCHEMA, 'WRITE_APPEND')
+    print('Writing repository metadata...', flush=True)
+    # repositories: full refresh across all owners in one truncate-write so
+    # every owner's repos survive (a per-owner truncate would wipe the others).
     load_rows(client, 'repositories', repo_rows, REPOS_SCHEMA, 'WRITE_TRUNCATE')
 
-    print(f'Done. new_commits={len(all_commits)} repos={len(repo_rows)} '
-          f'rl_remaining={rl_remaining()}')
+    print(f'Done. repos={len(repo_rows)} rl_remaining={rl_remaining()}', flush=True)
     if incomplete:
-        print('INCOMPLETE (rate limited) — rerun to finish:')
+        print('INCOMPLETE (rate limited) — rerun to finish:', flush=True)
         for x in incomplete:
-            print('   -', x)
+            print('   -', x, flush=True)
 
 
 if __name__ == '__main__':
