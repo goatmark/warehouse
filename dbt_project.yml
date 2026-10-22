@@ -20,6 +20,18 @@ target-path: "target"  # directory which will store compiled SQL files
 clean-targets:         # directories to be removed by `dbt clean`
   - "target"
 
+seeds:
+  warehouse:
+    infra_credential_bindings:
+      +column_types:
+        vendor: string
+        credential_id: string
+        project: string
+        service: string
+        environment: string
+        valid_from: date
+        valid_to: date
+
 # 3-way schema routing (see macros/generate_schema_name.sql).
 # Default target schema is dwh_reporting; the models below are pinned to
 # dedicated finance datasets. Everything else lands in dwh_reporting.

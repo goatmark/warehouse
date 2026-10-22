@@ -21,14 +21,14 @@ or_dedup AS (
 ),
 ant_dedup AS (
   SELECT *, ROW_NUMBER() OVER (
-    PARTITION BY DATE(bucket_start), model, bucket_start, input_tokens, output_tokens
+    PARTITION BY bucket_start, model
     ORDER BY loaded_at DESC
   ) AS rn
   FROM `data-warehouse-475122.data_finance_business.fct_anthropic_usage_daily`
 ),
 oai_dedup AS (
   SELECT *, ROW_NUMBER() OVER (
-    PARTITION BY DATE(bucket_start), model, bucket_start, input_tokens, output_tokens
+    PARTITION BY bucket_start, model
     ORDER BY loaded_at DESC
   ) AS rn
   FROM `data-warehouse-475122.data_finance_business.fct_openai_usage_daily`
@@ -58,11 +58,25 @@ oai_agg AS (
   SELECT
     DATE(bucket_start) AS d, 'openai' AS vendor, model,
     SUM(input_tokens) AS prompt_tokens, SUM(output_tokens) AS completion_tokens,
-    SUM(input_tokens + output_tokens + COALESCE(cached_tokens,0)) AS total_tokens,
+    -- OpenAI input_tokens already includes cached input.
+    SUM(input_tokens + output_tokens) AS total_tokens,
     SUM(cached_tokens) AS cached_tokens, 0 AS cache_creation_tokens,
-    SUM(cost_usd) AS cost, SUM(requests) AS requests, TRUE AS has_token_data, 'api_usage' AS source
+    -- Legacy collector copied the organization day cost onto every model.
+    -- A model-level allocation cannot be recovered from that export.
+    CAST(NULL AS FLOAT64) AS cost, SUM(requests) AS requests, TRUE AS has_token_data, 'api_usage' AS source
   FROM oai_dedup WHERE rn = 1
   GROUP BY 1, 2, 3
+),
+oai_cost AS (
+  SELECT DATE(bucket_start) AS d, 'openai' AS vendor,
+    CAST(NULL AS STRING) AS model,
+    0 AS prompt_tokens, 0 AS completion_tokens, 0 AS total_tokens,
+    0 AS cached_tokens, 0 AS cache_creation_tokens,
+    -- Each legacy row contains the same org/day bill. Keep its newest value once.
+    ARRAY_AGG(cost_usd IGNORE NULLS ORDER BY loaded_at DESC LIMIT 1)[SAFE_OFFSET(0)] AS cost,
+    CAST(NULL AS INT64) AS requests, FALSE AS has_token_data, 'provider_billed' AS source
+  FROM oai_dedup WHERE rn = 1
+  GROUP BY 1
 ),
 receipts AS (
   SELECT
@@ -78,5 +92,7 @@ UNION ALL
 SELECT * FROM ant_agg
 UNION ALL
 SELECT * FROM oai_agg
+UNION ALL
+SELECT * FROM oai_cost
 UNION ALL
 SELECT * FROM receipts

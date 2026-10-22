@@ -12,5 +12,7 @@ SELECT
   SUM(cost) AS cost,
   SUM(requests) AS requests,
   LOGICAL_OR(has_token_data) AS has_any_token_data
-FROM `data-warehouse-475122.data_finance_business.fct_llm_usage_daily`
+FROM {{ ref('fct_llm_usage_daily') }}
+-- Receipts include funding/top-ups and are not additive to consumed usage.
+WHERE source != 'receipt'
 GROUP BY 1, 2, 3

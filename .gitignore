@@ -5,3 +5,5 @@ dbt_packages/
 logs/
 profiles.yml
 .user.yml
+__pycache__/
+*.pyc

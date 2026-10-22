@@ -1,0 +1,79 @@
+name: Infrastructure provider costs
+
+on:
+  schedule:
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Completed UTC days to refresh
+        default: '7'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-cost-sync
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        vendor: [openai, anthropic, openrouter]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install google-cloud-bigquery
+      - name: Write reporting identity
+        env:
+          GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_DWH_CREDENTIALS_JSON" > "$RUNNER_TEMP/gcp-dwh.json"
+      - name: Collect complete provider snapshots
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-dwh.json
+          OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
+          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
+          OPENROUTER_MANAGEMENT_KEY: ${{ secrets.OPENROUTER_MANAGEMENT_KEY }}
+          COST_DAYS: ${{ inputs.days || '7' }}
+        run: python scripts/infra_cost_sync.py --vendor '${{ matrix.vendor }}' --days "$COST_DAYS"
+
+  report:
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install dbt-bigquery
+      - name: Write reporting identity and dbt profile
+        env:
+          GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_DWH_CREDENTIALS_JSON" > "$RUNNER_TEMP/gcp-dwh.json"
+          mkdir -p "$RUNNER_TEMP/dbt"
+          cat > "$RUNNER_TEMP/dbt/profiles.yml" <<EOF
+          default:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: service-account
+                project: data-warehouse-475122
+                dataset: dwh_reporting
+                keyfile: $RUNNER_TEMP/gcp-dwh.json
+                location: US
+                threads: 4
+          EOF
+      - run: dbt build --profiles-dir "$RUNNER_TEMP/dbt" --select +rpt_infrastructure_cost_monthly rpt_llm_monthly rpt_llm_cost_per_token

@@ -1,0 +1,7 @@
+version: 2
+sources:
+  - name: infra
+    database: data-warehouse-475122
+    schema: data_finance_business
+    tables:
+      - name: infra_provider_events

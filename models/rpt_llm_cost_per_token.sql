@@ -9,7 +9,7 @@ WITH monthly AS (
     SUM(completion_tokens) AS completion_tokens,
     SUM(total_tokens) AS total_tokens,
     SUM(cost) AS cost
-  FROM `data-warehouse-475122.data_finance_business.fct_llm_usage_daily`
+  FROM {{ ref('fct_llm_usage_daily') }}
   WHERE has_token_data = TRUE
   GROUP BY 1, 2, 3
 )
