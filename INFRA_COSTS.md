@@ -110,6 +110,20 @@ domain restrictions remain intact. No broad factory service-account key is copie
 to CI. Only normalized billing facts and source-readiness metadata are loaded
 centrally. The local existing owner credential can verify initial export readiness.
 
+| Billing account | Native export dataset | Reporting access |
+| --- | --- | --- |
+| 01A404-EDB788-70AEC0 (main/shared, including prepsavvy-prod) | data-warehouse-475122.raw_gcp_billing (US) | Existing central reporting identity |
+| 01AB73-37ED3F-744977 (Prep factory) | i-academy-502921-u1.raw_gcp_billing (US) | Dedicated keyless Prep reader |
+| 01E29E-5FD32D-B9B334 (BibleTimes) | bibletimes-infra.raw_gcp_billing (US) | Local native read available; dedicated CI identity awaits owner verification |
+
+All three native exports were enabled on 2026-10-22. The initial main export
+contained 421 rows/$0.194549 through 2026-09-01; this is partial historical
+backfill, not October coverage. Prep/BibleTimes missing native tables remain
+pending. The collector detects new standard export tables automatically.
+New venture exports retain native service/SKU detail; proven i-academy BigQuery
+charges are assigned to PrepSavvy factory-warehouse, without inferring that
+other cloud services belong to that workload.
+
 `.github/workflows/hosting-cost-sync.yml` refreshes native hosting data daily
 at 06:45 UTC in GitHub Actions. Railway uses a dedicated workspace reporting
 token; DigitalOcean uses the existing billing identity. Supabase PDFs and explicit
