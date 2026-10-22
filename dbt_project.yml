@@ -22,6 +22,16 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 seeds:
   warehouse:
+    infra_hosting_resource_bindings:
+      +column_types:
+        vendor: string
+        resource_id: string
+        project: string
+        service: string
+        environment: string
+        valid_from: date
+        valid_to: date
+        evidence_url: string
     infra_provider_project_bindings:
       +column_types:
         vendor: string

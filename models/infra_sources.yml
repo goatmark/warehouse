@@ -5,3 +5,5 @@ sources:
     schema: data_finance_business
     tables:
       - name: infra_provider_events
+      - name: infra_hosting_resource_events
+      - name: infra_operational_usage_events

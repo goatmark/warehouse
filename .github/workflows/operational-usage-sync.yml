@@ -1,0 +1,51 @@
+name: Operational usage metadata
+
+on:
+  schedule:
+    - cron: '10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operational-usage-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install dbt-bigquery google-auth requests
+      - name: Reporting credentials
+        env:
+          GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_DWH_CREDENTIALS_JSON" > "$RUNNER_TEMP/gcp-dwh.json"
+          mkdir -p "$RUNNER_TEMP/dbt"
+          cat > "$RUNNER_TEMP/dbt/profiles.yml" <<EOF
+          default:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: service-account
+                project: data-warehouse-475122
+                dataset: dwh_reporting
+                keyfile: $RUNNER_TEMP/gcp-dwh.json
+                location: US
+                threads: 4
+          EOF
+      - name: Read allowlisted Drive metadata
+        env:
+          OPERATIONAL_DRIVE_TOKEN_JSON: ${{ secrets.OPERATIONAL_DRIVE_TOKEN_JSON }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-dwh.json
+        run: python scripts/operational_usage_sync.py --drive
+      - name: Build separate operational facts
+        run: dbt build --profiles-dir "$RUNNER_TEMP/dbt" --select +rpt_infra_operational_usage_daily

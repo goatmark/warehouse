@@ -11,6 +11,7 @@ unavailable, not free. NULL month identifies invalid historical source dates.
 | billed_cost | OpenAI and Anthropic provider cost reports, not invoice payment | No |
 | receipt_payment | Legacy email/card receipts, including API credits and subscriptions; not reconciled or guaranteed deduplicated | No |
 | ledger_expense | Railway, Vercel, Supabase, Google Cloud and DigitalOcean expense lines from the accounting ledger | No |
+| hosting_allocation | Native resource billing/usage dollars allocated by evidenced resource ownership and exact billing-period time overlap | No |
 
 Receipts are excluded from the existing `rpt_llm_monthly` consumption report.
 Legacy OpenAI model rows have unknown cost because the collector copied the
@@ -65,11 +66,49 @@ OpenRouter groups by key and model; returned labels are mapped only when the
 management inventory gives a unique label-to-hash match. Deleted/ambiguous
 keys remain unattributed.
 
-Hosting coverage uses accounting ledger expenses. Resource/project-level
-Railway, Vercel, Supabase and GCP usage exports are not present, so those costs
-remain unattributed. Google Cloud includes all cloud products; it cannot be
-labelled specifically Cloud Run. Ledger classification changes belong in the
-ledger repository. Do not infer hosting project ownership from vendor names.
+Hosting resources are ingested by `scripts/hosting_resource_sync.py` from native
+Vercel FOCUS exports, Railway service meters, finalized DigitalOcean invoices,
+and reconciled Supabase invoice lines. `infra_hosting_resource_bindings` holds
+resource ownership and evidence. `fct_hosting_resource_monthly` preserves native
+source IDs and billing windows, costs, effective usage costs and evidence. Billing
+windows crossing months are allocated by exact time overlap, with a final-day
+rounding remainder so costs are conserved. Current Railway accrual stops at its
+measurement cutoff; final invoices retain their contractual service interval.
+
+`rpt_hosting_reconciliation_monthly` keeps provider resource costs, ledger
+expenses, allocated project costs, shared fees and unknown resources separate.
+Its difference is a reconciliation gap, never a fictitious shared expense.
+`billing_vendor` distinguishes the cash merchant from the resource provider:
+Vercel-billed Supabase marketplace costs reconcile against Vercel cash while
+remaining Supabase resource costs. Supabase prior balances are not added again
+as expenses. Effective usage from included-credit plans is separate from billed
+costs and is never added to them.
+
+Three exact Google Cloud cash lines match BibleTimes receipts via
+`infra_hosting_ledger_bindings`; they are attributed within ledger_expense,
+without inventing SKU usage or service periods. Other unresolved cloud costs
+remain visible. `rpt_hosting_source_coverage` exposes each vendor's last collection,
+source window, resource count and pending/stale status. GCP resource export is
+pending its first native records. Ledger classification changes belong in the
+ledger repository.
+
+## Generator operational diagnostics
+
+`scripts/operational_usage_sync.py` reads only registered PrepSavvy factory meter
+files or the configured exact Drive metadata-file ID. Prompts, responses, API
+keys and error bodies are never persisted. Factory meter calls mirror to
+`H:/My Drive/Infra/ai-cost-attribution/operational/prepsavvy-factory.jsonl` for
+Drive synchronization. `.github/workflows/operational-usage-sync.yml` collects
+that file hourly using the existing reporting OAuth identity. No Windows task
+is installed. Existing generator processes require their normal restart before
+new central logging code takes effect; no processes are killed by ingestion.
+
+`fct_infra_operational_usage` deduplicates call metadata; its daily report retains
+run, generator, stage, cell, model, provider and measured-versus-estimated costs.
+Historical missing key/environment/generator values stay unknown. These
+diagnostic amounts never enter financial/provider totals. Local and cloud
+loaders skip already-ingested call IDs. The cloud reader uses only the allowlisted
+Drive file; its OAuth identity is never exposed to generation runtimes.
 
 Verify changes with `python -m unittest discover -s tests -p 'test_*.py'` and
 `dbt build --profiles-dir . --select +rpt_infrastructure_cost_monthly rpt_llm_monthly rpt_llm_cost_per_token`.
