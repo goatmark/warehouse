@@ -8,7 +8,7 @@ from supabase_invoice_collect import parse_invoice, normalize, period_dates
 from railway_collect import normalize_service
 from digitalocean_collect import normalize as normalize_do
 from vercel_marketplace_gmail_collect import parse_receipt
-from gcp_billing_export_collect import account_status
+from gcp_billing_export_collect import account_status,resource_identity
 
 
 class SupabaseInvoiceTests(unittest.TestCase):
@@ -81,6 +81,16 @@ class NativeResourceTests(unittest.TestCase):
         self.assertEqual(account_status('native-table',None,'native_tables_present',now),'awaiting_native_rows')
         self.assertEqual(account_status('native-table','2026-09-01T20:00:00+00:00','native_tables_present',now),'backfill_or_source_lag')
         self.assertEqual(account_status('native-table','2026-10-22T12:00:00+00:00','native_tables_present',now),'recent_native_usage_observed')
+
+    def test_gcp_new_venture_skus_do_not_change_legacy_main_source_identity(self):
+        row={'cloud_project_id':'i-academy-502921-u1','billing_account_id':'account',
+             'service_id':'bigquery-id','sku_id':'sku-one','cloud_services':['BigQuery']}
+        resource,owner,service=resource_identity(row,True)
+        self.assertEqual((owner,service),('prepsavvy','factory-warehouse'))
+        self.assertIn('/service:bigquery-id/sku:sku-one',resource)
+        self.assertNotEqual(resource,resource_identity({**row,'sku_id':'sku-two'},True)[0])
+        self.assertEqual(resource_identity(row,False)[0],'project:i-academy-502921-u1')
+        self.assertEqual(resource_identity({**row,'cloud_services':['Cloud Run']},True)[2],'cloud')
     def test_marketplace_native_identity_period_and_mixed_total_guard(self):
         text = '''Vercel Inc. Paid on October 16, 2026
 Receipt #2510-0603-3828

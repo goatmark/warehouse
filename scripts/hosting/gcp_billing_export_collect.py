@@ -27,6 +27,16 @@ def account_status(native_table,latest,dataset_state,now):
     return 'awaiting_native_table'
 
 
+def resource_identity(item,detailed):
+    project=item['cloud_project_id']
+    resource=f'project:{project}' if project else f"billing_account:{item['billing_account_id']}"
+    if detailed:resource+=f"/service:{item['service_id']}/sku:{item['sku_id']}"
+    owner,service=OWNERS.get(project,('unattributed','unattributed'))
+    if project=='i-academy-502921-u1' and item['cloud_services']==['BigQuery']:
+        service='factory-warehouse'
+    return resource,owner,service
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dataset', action='append', help='Repeatable override; default reads registered export datasets')
@@ -49,11 +59,14 @@ def main():
     tables=[];dataset_states=[];accounts=set()
     for dataset in datasets:
         source_client=client
-        if dataset.startswith('i-academy-502921-u1.'):
+        source_configs={'i-academy-502921-u1':('GCP_PREPSAVVY_CREDENTIALS_FILE','H:/My Drive/Infra/gcp-prepsavvy-admin/credentials.json'),
+                        'bibletimes-infra':('GCP_BIBLETIMES_CREDENTIALS_FILE','H:/My Drive/Infra/gcp-bibletimes-admin/credentials.json')}
+        source_config=source_configs.get(dataset.split('.')[0])
+        if source_config:
             import google.auth
-            source_file=os.environ.get('GCP_PREPSAVVY_CREDENTIALS_FILE')
-            local=Path('H:/My Drive/Infra/gcp-prepsavvy-admin/credentials.json')
-            if not source_file and local.exists():source_file=str(local)
+            source_file=os.environ.get(source_config[0])
+            local=Path(source_config[1]) if source_config[1] else None
+            if not source_file and local and local.exists():source_file=str(local)
             if source_file:
                 source_credentials,_=google.auth.load_credentials_from_file(source_file,scopes=['https://www.googleapis.com/auth/cloud-platform'])
                 source_client=bigquery.Client(project=dataset.split('.')[0],credentials=source_credentials)
@@ -72,8 +85,15 @@ def main():
     rows, owners, raw_rows = [], {}, []
     for table,source_client in tables:
         full = f'{table.project}.{table.dataset_id}.{table.table_id}'
+        # Newly configured venture accounts retain native service/SKU grain.
+        # Preserve existing main-account IDs so the initial aggregate is not
+        # counted again alongside a new detailed representation.
+        detailed=table.project!='data-warehouse-475122'
+        dimensions='service.id AS service_id,sku.id AS sku_id,' if detailed else ''
+        group_dimensions=',service_id,sku_id' if detailed else ''
         query = f'''
           SELECT billing_account_id, project.id AS cloud_project_id,
+                 {dimensions}
                  DATE_TRUNC(DATE(usage_start_time), MONTH) AS usage_month,
                  MIN(usage_start_time) AS first_usage,
                  MAX(usage_end_time) AS last_usage,
@@ -85,13 +105,13 @@ def main():
                  ARRAY_AGG(DISTINCT service.description IGNORE NULLS) AS cloud_services,
                  ARRAY_AGG(DISTINCT sku.description IGNORE NULLS) AS cloud_skus
           FROM `{full}`
-          GROUP BY billing_account_id, cloud_project_id, usage_month
+          GROUP BY billing_account_id, cloud_project_id, usage_month{group_dimensions}
         '''
         results = source_client.query(query, job_config=bigquery.QueryJobConfig(maximum_bytes_billed=100_000_000)).result()
         for result in results:
             item = dict(result)
             project = item['cloud_project_id']
-            resource = f'project:{project}' if project else f"billing_account:{item['billing_account_id']}"
+            resource,owner,service=resource_identity(item,detailed)
             start = item['usage_month']
             end = start.replace(year=start.year + 1, month=1) if start.month == 12 else start.replace(month=start.month + 1)
             end_at = min(datetime(end.year, end.month, end.day, tzinfo=timezone.utc).isoformat(), now)
@@ -107,7 +127,6 @@ def main():
                 'source_kind': 'export',
                 'source_id': f"gcp:{item['billing_account_id']}:{start}:{resource}",
                 'evidence_url': evidence, 'snapshot_at': now})
-            owner, service = OWNERS.get(project, ('unattributed', 'unattributed'))
             owners[resource] = {'vendor': 'google_cloud', 'resource_id': resource, 'project': owner,
                 'service': service, 'environment': 'production' if project and project.endswith('-prod') else 'mixed', 'valid_from': '2026-01-01',
                 'valid_to': None, 'evidence_url': evidence}
