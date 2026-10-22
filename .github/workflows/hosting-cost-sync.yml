@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: hosting-cost-sync
@@ -26,6 +27,15 @@ jobs:
           node-version: '24'
       - run: pip install dbt-bigquery google-auth requests pypdf
       - run: npm install -g vercel
+      - name: Keyless Prep billing reader
+        id: prep-billing
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/732347502120/locations/global/workloadIdentityPools/prepsavvy-gh-actions/providers/warehouse-billing
+          service_account: warehouse-billing-reader@i-academy-502921-u1.iam.gserviceaccount.com
+          project_id: i-academy-502921-u1
+          create_credentials_file: true
+          export_environment_variables: false
       - name: Reporting identities
         env:
           GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
@@ -58,6 +68,7 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_BILLING_TOKEN }}
           DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
           HOSTING_GMAIL_OAUTH_JSON: ${{ secrets.HOSTING_GMAIL_OAUTH_JSON }}
+          GCP_PREPSAVVY_CREDENTIALS_FILE: ${{ steps.prep-billing.outputs.credentials_file_path }}
         run: python scripts/sync_hosting_costs.py --output-dir "$RUNNER_TEMP/hosting" --profiles-dir "$RUNNER_TEMP/dbt"
       - name: Persist refreshed reporting OAuth sessions
         if: always()

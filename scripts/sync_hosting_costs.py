@@ -45,12 +45,12 @@ def main():
     run(collect/'supabase_invoice_collect.py','--invoice-dir',invoices,'--output',out/'supabase.jsonl',
         '--ownership-output',out/'supabase.ownership.jsonl','--raw-dir',out/'raw/supabase')
     load('supabase')
-    run(collect/'gcp_billing_export_collect.py','--output',out/'google_cloud.jsonl',
+    run(collect/'gcp_billing_export_collect.py','--write-readiness','--output',out/'google_cloud.jsonl',
         '--ownership-output',out/'google_cloud.ownership.jsonl','--readiness-output',out/'google-cloud-readiness.json',
         '--raw-dir',out/'raw/google_cloud')
     load('google_cloud')
     subprocess.run(['dbt','build','--project-dir',str(ROOT),'--profiles-dir',args.profiles_dir,
-        '--select','+rpt_infrastructure_cost_monthly','rpt_hosting_reconciliation_monthly','rpt_hosting_source_coverage'],check=True,cwd=ROOT)
+        '--select','+rpt_infrastructure_cost_monthly','rpt_hosting_reconciliation_monthly','+rpt_hosting_source_coverage'],check=True,cwd=ROOT)
     print('Native hosting exporters, ownership, reconciliation and financial report completed')
 
 

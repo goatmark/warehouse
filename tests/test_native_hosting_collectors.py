@@ -8,6 +8,7 @@ from supabase_invoice_collect import parse_invoice, normalize, period_dates
 from railway_collect import normalize_service
 from digitalocean_collect import normalize as normalize_do
 from vercel_marketplace_gmail_collect import parse_receipt
+from gcp_billing_export_collect import account_status
 
 
 class SupabaseInvoiceTests(unittest.TestCase):
@@ -73,6 +74,13 @@ Amount paid $25.01'''
 
 
 class NativeResourceTests(unittest.TestCase):
+    def test_gcp_missing_or_delayed_export_is_not_complete_zero_coverage(self):
+        now='2026-10-22T13:00:00+00:00'
+        self.assertEqual(account_status(None,None,'awaiting_dataset',now),'awaiting_native_table')
+        self.assertEqual(account_status(None,None,'reporting_credential_required',now),'reporting_credential_required')
+        self.assertEqual(account_status('native-table',None,'native_tables_present',now),'awaiting_native_rows')
+        self.assertEqual(account_status('native-table','2026-09-01T20:00:00+00:00','native_tables_present',now),'backfill_or_source_lag')
+        self.assertEqual(account_status('native-table','2026-10-22T12:00:00+00:00','native_tables_present',now),'recent_native_usage_observed')
     def test_marketplace_native_identity_period_and_mixed_total_guard(self):
         text = '''Vercel Inc. Paid on October 16, 2026
 Receipt #2510-0603-3828

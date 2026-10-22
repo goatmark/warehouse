@@ -1,0 +1,4 @@
+billing_account_id,account_scope,export_project,export_dataset,evidence_note
+01A404-EDB788-70AEC0,shared-main,data-warehouse-475122,raw_gcp_billing,Native main billing account export includes warehouse and prepsavvy-prod; allocation follows individual project evidence
+01AB73-37ED3F-744977,prepsavvy,i-academy-502921-u1,raw_gcp_billing,PrepSavvy owner native billing account links i-academy-502921-u1
+01E29E-5FD32D-B9B334,bibletimes,data-warehouse-475122,raw_gcp_billing,BibleTimes native Google Payments receipts identify separate billing account

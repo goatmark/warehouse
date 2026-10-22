@@ -6,4 +6,5 @@ sources:
     tables:
       - name: infra_provider_events
       - name: infra_hosting_resource_events
+      - name: infra_gcp_export_readiness
       - name: infra_operational_usage_events

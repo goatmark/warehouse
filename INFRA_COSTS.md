@@ -93,9 +93,22 @@ ten BibleTimes Supabase settlements, and five website Supabase marketplace
 settlements billed by Vercel. These are attributed within ledger_expense,
 without inventing SKU usage or service periods. Other unresolved cloud costs
 remain visible. `rpt_hosting_source_coverage` exposes each vendor's last collection,
-source window, resource count and pending/stale status. GCP resource export is
-pending its first native records. Ledger classification changes belong in the
+source window, resource count and pending/stale status. Native GCP main-account
+records have arrived, with partial historical backfill. A freshly collected
+export does not prove a complete month or zero cost for missing periods.
+`rpt_gcp_billing_export_coverage` separately tracks the main account, the PrepSavvy
+factory account and the BibleTimes account, including native usage cutoffs and
+missing-table/access states. Ledger classification changes belong in the
 ledger repository.
+
+GCP export locations are registered in `infra_gcp_billing_accounts`. The central
+reporting identity reads its own account; the PrepSavvy account is read in its
+own project using a dedicated keyless billing reader through GitHub OIDC. Its
+scope is dataset dataViewer and project jobUser; the identity provider is pinned
+to this repository, main branch and exact hosting workflow. Cross-organization
+domain restrictions remain intact. No broad factory service-account key is copied
+to CI. Only normalized billing facts and source-readiness metadata are loaded
+centrally. The local existing owner credential can verify initial export readiness.
 
 `.github/workflows/hosting-cost-sync.yml` refreshes native hosting data daily
 at 06:45 UTC in GitHub Actions. Railway uses a dedicated workspace reporting
