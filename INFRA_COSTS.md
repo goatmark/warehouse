@@ -26,6 +26,10 @@ It holds no secrets. Half-open valid_from/valid_to dates express ownership,
 starting with creation date. A binding does not assert deployment or cutover.
 Secret paths and rollout status are maintained separately under
 `H:/My Drive/Infra/openrouter/service-keys/manifest-2026-10-22.json`.
+Import additional manifest metadata with `python scripts/import_infra_bindings.py
+<manifest-path> --valid-from 2026-10-22`, review the seed and run the dbt build.
+The explicit date is needed only when created_at is missing. Existing ownership
+rows are preserved; rotation creates a new provider ID rather than overwriting it.
 
 Unknown or ambiguous IDs remain unattributed. Shared historical keys cannot
 prove a product allocation. Generator, stage and run IDs belong in workload
