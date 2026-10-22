@@ -118,11 +118,16 @@ centrally. The local existing owner credential can verify initial export readine
 
 All three native exports were enabled on 2026-10-22. The initial main export
 contained 421 rows/$0.194549 through 2026-09-01; this is partial historical
-backfill, not October coverage. Prep/BibleTimes missing native tables remain
-pending. The collector detects new standard export tables automatically.
+backfill, not October coverage. Prep subsequently exported 51 historical rows
+through September 1 with observed net cost zero; this does not establish zero
+October costs. BibleTimes keyless dataset access is verified and its first table
+remains pending. The collector detects new standard export tables automatically.
 New venture exports retain native service/SKU detail; proven i-academy BigQuery
 charges are assigned to PrepSavvy factory-warehouse, without inferring that
 other cloud services belong to that workload.
+The complete dual-reader hosted workflow and all 24 dbt checks passed on
+2026-10-22. Both ephemeral OIDC credential files are ignored and explicitly
+removed after collection; no venture service-account key is stored in CI.
 
 `.github/workflows/hosting-cost-sync.yml` refreshes native hosting data daily
 at 06:45 UTC in GitHub Actions. Railway uses a dedicated workspace reporting
