@@ -36,6 +36,15 @@ jobs:
           project_id: i-academy-502921-u1
           create_credentials_file: true
           export_environment_variables: false
+      - name: Keyless BibleTimes billing reader
+        id: bt-billing
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/702925889843/locations/global/workloadIdentityPools/warehouse-billing/providers/github
+          service_account: warehouse-billing-reader@bibletimes-infra.iam.gserviceaccount.com
+          project_id: bibletimes-infra
+          create_credentials_file: true
+          export_environment_variables: false
       - name: Reporting identities
         env:
           GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
@@ -69,7 +78,17 @@ jobs:
           DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
           HOSTING_GMAIL_OAUTH_JSON: ${{ secrets.HOSTING_GMAIL_OAUTH_JSON }}
           GCP_PREPSAVVY_CREDENTIALS_FILE: ${{ steps.prep-billing.outputs.credentials_file_path }}
+          GCP_BIBLETIMES_CREDENTIALS_FILE: ${{ steps.bt-billing.outputs.credentials_file_path }}
         run: python scripts/sync_hosting_costs.py --output-dir "$RUNNER_TEMP/hosting" --profiles-dir "$RUNNER_TEMP/dbt"
+      - name: Remove ephemeral venture credentials
+        if: always()
+        env:
+          PREP_BILLING_CREDENTIALS: ${{ steps.prep-billing.outputs.credentials_file_path }}
+          BT_BILLING_CREDENTIALS: ${{ steps.bt-billing.outputs.credentials_file_path }}
+        run: |
+          for file in "$PREP_BILLING_CREDENTIALS" "$BT_BILLING_CREDENTIALS"; do
+            if [ -n "$file" ]; then rm -f -- "$file"; fi
+          done
       - name: Persist refreshed reporting OAuth sessions
         if: always()
         env:

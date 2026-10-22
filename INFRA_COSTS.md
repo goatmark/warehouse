@@ -102,8 +102,8 @@ missing-table/access states. Ledger classification changes belong in the
 ledger repository.
 
 GCP export locations are registered in `infra_gcp_billing_accounts`. The central
-reporting identity reads its own account; the PrepSavvy account is read in its
-own project using a dedicated keyless billing reader through GitHub OIDC. Its
+reporting identity reads its own account; PrepSavvy and BibleTimes accounts are
+read in their own projects using dedicated keyless billing readers through GitHub OIDC. Each reader's
 scope is dataset dataViewer and project jobUser; the identity provider is pinned
 to this repository, main branch and exact hosting workflow. Cross-organization
 domain restrictions remain intact. No broad factory service-account key is copied
@@ -114,7 +114,7 @@ centrally. The local existing owner credential can verify initial export readine
 | --- | --- | --- |
 | 01A404-EDB788-70AEC0 (main/shared, including prepsavvy-prod) | data-warehouse-475122.raw_gcp_billing (US) | Existing central reporting identity |
 | 01AB73-37ED3F-744977 (Prep factory) | i-academy-502921-u1.raw_gcp_billing (US) | Dedicated keyless Prep reader |
-| 01E29E-5FD32D-B9B334 (BibleTimes) | bibletimes-infra.raw_gcp_billing (US) | Local native read available; dedicated CI identity awaits owner verification |
+| 01E29E-5FD32D-B9B334 (BibleTimes) | bibletimes-infra.raw_gcp_billing (US) | Dedicated keyless BibleTimes reader |
 
 All three native exports were enabled on 2026-10-22. The initial main export
 contained 421 rows/$0.194549 through 2026-09-01; this is partial historical
