@@ -31,6 +31,9 @@ def main():
         '--to',now.date().isoformat()+'T00:00:00Z','--output',out/'vercel.jsonl',
         '--ownership-output',out/'vercel.ownership.jsonl','--cache-dir',out/'raw/vercel')
     load('vercel')
+    run(collect/'vercel_marketplace_gmail_collect.py','--output',out/'vercel-marketplace.jsonl',
+        '--ownership-output',out/'vercel-marketplace.ownership.jsonl')
+    load('vercel-marketplace')
     run(collect/'railway_collect.py','--period','current','--period','previous',
         '--output',out/'railway.jsonl','--ownership-output',out/'railway.ownership.jsonl','--raw-dir',out/'raw/railway')
     load('railway')

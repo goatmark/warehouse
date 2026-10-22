@@ -62,6 +62,9 @@ projects/workspaces to project and environment using date windows. Workspace-
 only bills use attribution_method=provider_project, while service remains
 unattributed. Existing default/shared provider workspaces remain unmapped.
 Priority Tier costs are absent from that API. Its usage remains key-grained.
+OpenAI billed costs retain native API key IDs as well as project and line item,
+so registered service keys give exact service-level billed attribution. A native
+30-day comparison conserved all $76.31920124 before and after key grouping.
 OpenRouter groups by key and model; returned labels are mapped only when the
 management inventory gives a unique label-to-hash match. Deleted/ambiguous
 keys remain unattributed.
@@ -84,13 +87,26 @@ remaining Supabase resource costs. Supabase prior balances are not added again
 as expenses. Effective usage from included-credit plans is separate from billed
 costs and is never added to them.
 
-Three exact Google Cloud cash lines match BibleTimes receipts via
-`infra_hosting_ledger_bindings`; they are attributed within ledger_expense,
+Eighteen exact cash lines match native invoice/receipt evidence via
+`infra_hosting_ledger_bindings`: three BibleTimes Google Cloud payments,
+ten BibleTimes Supabase settlements, and five website Supabase marketplace
+settlements billed by Vercel. These are attributed within ledger_expense,
 without inventing SKU usage or service periods. Other unresolved cloud costs
 remain visible. `rpt_hosting_source_coverage` exposes each vendor's last collection,
 source window, resource count and pending/stale status. GCP resource export is
 pending its first native records. Ledger classification changes belong in the
 ledger repository.
+
+`.github/workflows/hosting-cost-sync.yml` refreshes native hosting data daily
+at 06:45 UTC in GitHub Actions. Railway uses a dedicated workspace reporting
+token; DigitalOcean uses the existing billing identity. Supabase PDFs and explicit
+Vercel marketplace Supabase lines are fetched through existing read-only Gmail
+OAuth. Marketplace collection verifies the unique live Supabase installation,
+uses actual receipt amounts/periods/IDs, and rejects ambiguous or mixed invoices.
+It never projects a recurring plan charge. Vercel OAuth sessions are refreshed
+through the official CLI and securely persisted back to repository secrets.
+Hosted execution, all exporters, OAuth persistence, and the complete 22-check
+hosting build were verified successfully on 2026-10-22.
 
 ## Generator operational diagnostics
 

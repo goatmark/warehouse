@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts' / 'hostin
 from supabase_invoice_collect import parse_invoice, normalize, period_dates
 from railway_collect import normalize_service
 from digitalocean_collect import normalize as normalize_do
+from vercel_marketplace_gmail_collect import parse_receipt
 
 
 class SupabaseInvoiceTests(unittest.TestCase):
@@ -72,6 +73,21 @@ Amount paid $25.01'''
 
 
 class NativeResourceTests(unittest.TestCase):
+    def test_marketplace_native_identity_period_and_mixed_total_guard(self):
+        text = '''Vercel Inc. Paid on October 16, 2026
+Receipt #2510-0603-3828
+Oct 15\ufffdNov 15, 2026
+[Supabase] Pro Plan - $25.00 per unit
+Qty 1
+Amount paid $25.00'''
+        row = parse_receipt(text, 'message', '2026-10-16T00:00:00Z')
+        self.assertEqual(row['source_id'], 'receipt-2510-0603-3828:supabase-pro')
+        self.assertEqual(row['period_start'], '2026-10-15T00:00:00+00:00')
+        self.assertEqual(row['billing_vendor'], 'vercel')
+        self.assertEqual(row['vendor'], 'supabase')
+        with self.assertRaisesRegex(ValueError, 'mixed charges'):
+            parse_receipt(text.replace('Amount paid $25.00', 'Amount paid $30.00'), 'message', '2026-10-16T00:00:00Z')
+
     def test_current_meter_does_not_allocate_cost_into_future_or_before_creation(self):
         period = {'start': '2026-10-02T00:00:00Z', 'end': '2026-11-02T00:00:00Z'}
         project, service = {'id': 'project'}, {'id': 'service', 'name': 'service', 'totalDollars': '1.25'}
