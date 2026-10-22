@@ -55,7 +55,11 @@ The existing warehouse build also rebuilds these dbt models every two hours.
 
 OpenAI cost reports cover all cost line items; token counters currently cover
 completions and embeddings, not images/audio/storage. Anthropic costs are
-workspace/description-grained and cannot be claimed as exact key-level spend;
+workspace/description-grained and cannot be claimed as exact key-level spend.
+`seeds/infra_provider_project_bindings.csv` explicitly maps dedicated provider
+projects/workspaces to project and environment using date windows. Workspace-
+only bills use attribution_method=provider_project, while service remains
+unattributed. Existing default/shared provider workspaces remain unmapped.
 Priority Tier costs are absent from that API. Its usage remains key-grained.
 OpenRouter groups by key and model; returned labels are mapped only when the
 management inventory gives a unique label-to-hash match. Deleted/ambiguous

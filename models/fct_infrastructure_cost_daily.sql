@@ -10,10 +10,12 @@ WITH latest_snapshots AS (
   WHERE NOT e.is_marker
 ), attributed AS (
   SELECT e.event_date AS d, e.vendor, e.model, e.cost_basis,
-    COALESCE(b.project,'unattributed') AS project,
+    COALESCE(b.project,p.project,'unattributed') AS project,
     COALESCE(b.service,'unattributed') AS service,
-    COALESCE(b.environment,'unattributed') AS environment,
-    IF(b.credential_id IS NULL,'unattributed','credential') AS attribution_method,
+    COALESCE(b.environment,p.environment,'unattributed') AS environment,
+    CASE WHEN b.credential_id IS NOT NULL THEN 'credential'
+      WHEN p.provider_project_id IS NOT NULL THEN 'provider_project'
+      ELSE 'unattributed' END AS attribution_method,
     e.cost_usd, e.prompt_tokens, e.completion_tokens,
     e.prompt_tokens + e.completion_tokens AS total_tokens
   FROM current_events e
@@ -21,6 +23,10 @@ WITH latest_snapshots AS (
     ON b.vendor=e.vendor AND b.credential_id=e.credential_id
     AND e.event_date >= b.valid_from
     AND e.event_date < COALESCE(b.valid_to,DATE '9999-12-31')
+  LEFT JOIN {{ ref('infra_provider_project_bindings') }} p
+    ON p.vendor=e.vendor AND p.provider_project_id=e.provider_project_id
+    AND e.event_date >= p.valid_from
+    AND e.event_date < COALESCE(p.valid_to,DATE '9999-12-31')
 ), legacy AS (
   SELECT d,vendor,model,
     CASE source WHEN 'receipt' THEN 'receipt_payment'

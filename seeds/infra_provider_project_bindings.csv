@@ -1,0 +1,5 @@
+vendor,provider_project_id,project,environment,valid_from,valid_to
+openai,proj_8f4aqq7pDkoxaTnVNyxPcARU,bibletimes,production,2026-10-22,
+openai,proj_r2ng4KJJbMO5E4M0Ikp6hxQZ,bibletimes,nonproduction,2026-10-22,
+anthropic,wrkspc_01T4vxKLbTfwCeZAX4eZABCG,bibletimes,production,2026-10-22,
+anthropic,wrkspc_018v6zsHNXoLGduH2DCB5p8n,bibletimes,nonproduction,2026-10-22,

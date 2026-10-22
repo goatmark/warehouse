@@ -31,6 +31,20 @@ class AccountingTests(unittest.TestCase):
         self.assertEqual(rows[0]['prompt_tokens'] + rows[0]['completion_tokens'], 100)
         self.assertEqual(rows[1]['cost_usd'], '1.2345')
 
+    def test_anthropic_key_usage_does_not_invent_key_billing(self):
+        usage = [{'starting_at': '2026-10-22T00:00:00Z', 'results': [
+            {'model': 'a', 'api_key_id': 'apikey_one', 'workspace_id': 'workspace_one', 'uncached_input_tokens': 7},
+            {'model': 'a', 'api_key_id': 'apikey_two', 'workspace_id': 'workspace_one', 'uncached_input_tokens': 13}]}]
+        costs = [{'starting_at': '2026-10-22T00:00:00Z', 'results': [
+            {'model': 'a', 'workspace_id': 'workspace_one', 'amount': '100'}]}]
+        with patch.object(sync, 'pages', side_effect=[usage, costs]) as calls:
+            rows, _ = sync.anthropic_rows('test', datetime.now(timezone.utc), datetime.now(timezone.utc))
+        self.assertIn('api_key_id', calls.call_args_list[0].args[1]['group_by[]'])
+        self.assertEqual({r['credential_id'] for r in rows[:2]}, {'apikey_one', 'apikey_two'})
+        self.assertEqual(rows[2]['provider_project_id'], 'workspace_one')
+        self.assertIsNone(rows[2]['credential_id'])
+        self.assertEqual(rows[2]['cost_usd'], '1')
+
     def test_repeated_page_cursor_refuses_incomplete_export(self):
         with patch.object(sync, 'request', return_value={'data': [], 'has_more': True, 'next_page': 'again'}):
             with self.assertRaises(ValueError):
