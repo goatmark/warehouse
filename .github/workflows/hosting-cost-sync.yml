@@ -62,7 +62,7 @@ jobs:
       - name: Persist refreshed reporting OAuth sessions
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.WAREHOUSE_SECRET_ADMIN_TOKEN }}
         run: |
           for owner in GOATMARK PREPSAVVY; do
             lower=$(printf '%s' "$owner" | tr '[:upper:]' '[:lower:]')

@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -34,6 +35,9 @@ def period_dates(text):
 
 
 def parse_invoice(text, invoice_id):
+    # Gmail attaches both invoices and paid receipts for the same native invoice.
+    # Receipts retain the original lines but use Amount paid / Receipt date.
+    text = ''.join(c for c in text if unicodedata.category(c) != 'Cf').replace('\x00', '-').replace('\ufffd', '-')
     start = text.find('Description Quantity')
     end = text.find('Memo:', start)
     if start < 0 or end < 0:
@@ -61,7 +65,10 @@ def parse_invoice(text, invoice_id):
                         'net': str(gross - discounts), 'resource_ref': refs[0] if refs else None,
                         'period_start': period_start, 'period_end': period_end, 'native_period': native_period})
     subtotal = amount(re.search(r'Subtotal\s+' + MONEY, text).group(1))
-    total = amount(re.search(r'Amount due\s+' + MONEY, text).group(1))
+    settlement = re.search(r'Amount (due|paid)\s+' + MONEY, text)
+    if not settlement:
+        raise ValueError(f'{invoice_id}: native invoice settlement total missing')
+    total = amount(settlement.group(2))
     taxes = sum((amount(x) for x in re.findall(r'Chicago\s*\([^)]*\)\s+' + MONEY, text)), Decimal(0))
     applied_match = re.search(r'Applied balance\s+(-?)' + MONEY, text)
     applied = amount(applied_match.group(2)) * (-1 if applied_match.group(1) else 1) if applied_match else Decimal(0)
@@ -70,13 +77,14 @@ def parse_invoice(text, invoice_id):
         raise ValueError(f'{invoice_id}: line subtotal {computed} does not reconcile to {subtotal}')
     if subtotal + taxes + applied != total:
         raise ValueError(f'{invoice_id}: subtotal, tax and applied balance do not reconcile')
-    issue = re.search(r'(?:Date of issue|Invoice date)\s+([A-Z][a-z]{2} \d{1,2}, \d{4})', text)
+    issue = re.search(r'(?:Date of issue|Invoice date|Receipt date)\s+([A-Z][a-z]{2} \d{1,2}, \d{4})', text)
     if not issue:
         raise ValueError(f'{invoice_id}: issue date missing')
     issued = datetime.strptime(issue.group(1), '%b %d, %Y').date()
     return {'invoice_id': invoice_id, 'issue_date': issued.isoformat(), 'charges': charges,
             'subtotal': str(subtotal), 'tax': str(taxes), 'applied_prior_balance': str(applied),
             'amount_due': str(total), 'incurred_cost': str(subtotal + taxes), 'currency': 'USD',
+            'settlement_label': 'amount_' + settlement.group(1),
             'reconciled': True,
             'period_note': 'PDF periods have date granularity; exclusive end is displayed end date plus one day. Calendar allocation is declared proration, not measured daily usage.'}
 

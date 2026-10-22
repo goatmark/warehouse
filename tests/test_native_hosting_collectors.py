@@ -53,6 +53,23 @@ Amount due $25.01'''
         self.assertEqual(period_dates('Jun 11 – 20, 2026')[:2], ('2026-06-11', '2026-06-21'))
         self.assertEqual(period_dates('Dec 21 – Jan 20, 2026')[:2], ('2025-12-21', '2026-01-21'))
 
+    def test_paid_receipt_reconciles_same_invoice_without_rebooking_prior_balance(self):
+        text = '''Receipt date Mar 21, 2026
+Description Quantity Rate Amount
+Pro Plan
+Mar 21 \ufffd Apr 20, 2026
+1 $25.00 $25.00
+Memo:
+Subtotal $25.00
+Applied balance $0.01
+Amount paid $25.01'''
+        invoice = parse_invoice(text, 'XALGDR-90003')
+        self.assertEqual(invoice['settlement_label'], 'amount_paid')
+        self.assertEqual(invoice['incurred_cost'], '25.00')
+        self.assertEqual(invoice['amount_due'], '25.01')
+        with self.assertRaisesRegex(ValueError, 'do not reconcile'):
+            parse_invoice(text.replace('Amount paid $25.01', 'Amount paid $25.02'), 'XALGDR-90003')
+
 
 class NativeResourceTests(unittest.TestCase):
     def test_current_meter_does_not_allocate_cost_into_future_or_before_creation(self):
