@@ -10,6 +10,22 @@ spec.loader.exec_module(sync)
 
 
 class AccountingTests(unittest.TestCase):
+    def test_openai_billed_cost_preserves_native_key_and_project_identity(self):
+        costs = [{'start_time': 1792022400, 'results': [
+            {'api_key_id': 'key_embeddings', 'project_id': 'project_product',
+             'line_item': 'embeddings', 'amount': {'value': '0.00123', 'currency': 'usd'}},
+            {'api_key_id': 'key_content', 'project_id': 'project_product',
+             'line_item': 'images', 'amount': {'value': '0.00456', 'currency': 'usd'}}]}]
+        with patch.object(sync, 'pages', side_effect=[[], [], costs]) as calls:
+            rows, _ = sync.openai_rows('test', datetime.now(timezone.utc), datetime.now(timezone.utc))
+        self.assertEqual(calls.call_args_list[2].args[1]['group_by[]'],
+                         ['project_id', 'api_key_id', 'line_item'])
+        self.assertEqual([(r['credential_id'], r['provider_project_id'], r['line_item'], r['cost_usd'])
+                          for r in rows], [
+                             ('key_embeddings', 'project_product', 'embeddings', '0.00123'),
+                             ('key_content', 'project_product', 'images', '0.00456')])
+        self.assertTrue(all(r['cost_basis'] == 'billed_cost' for r in rows))
+
     def test_openai_cost_is_not_copied_over_models_or_cached_tokens(self):
         usage = [{'start_time': 1792022400, 'results': [
             {'model': 'a', 'input_tokens': 100, 'input_cached_tokens': 40, 'output_tokens': 10},
