@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -26,7 +27,9 @@ TEAMS = {
 }
 
 
-def owner(project_name, service_name):
+def owner(project_name, service_name, team_id=None):
+    if project_name == 'ad-lab' and team_id == 'team_H0eSiHH2kOn2EyTrMo6GxSqq':
+        return ('prepsavvy', 'ad-lab')
     if not project_name:
         return ('shared', 'shared-platform-fee' if service_name == 'Pro' else 'unattributed')
     if project_name in {'bibletimes', 'bibletimes-intel', 'bt-report'}:
@@ -94,7 +97,7 @@ def normalize_focus(lines, team_id, slug, snapshot_at):
     assert sum((x['amount_usd'] for x in rows), Decimal(0)) == raw_total
     ownership = {}
     for row in rows:
-        project, service = owner(row['provider_project_name'], row['billing_service'])
+        project, service = owner(row['provider_project_name'], row['billing_service'], team_id)
         rid = row['resource_id']
         interval_start = row['period_start'][:10]
         if rid not in ownership:
@@ -122,10 +125,13 @@ def fetch_focus(team_id, token, start, end, target):
 def credential(env_name, auth_path):
     if os.environ.get(env_name):
         return os.environ[env_name]
+    auth_env = env_name.replace('_TOKEN', '_AUTH_FILE')
+    auth_path = Path(os.environ.get(auth_env, str(auth_path)))
     # Let the CLI refresh its existing OAuth session before reading its token.
     # No new access grant is requested, and no token is printed or put in argv.
-    cli = Path('C:/Users/mmajd/AppData/Roaming/npm/node_modules/vercel/dist/vc.js')
-    refreshed = subprocess.run(['node', str(cli), 'whoami', '--format', 'json',
+    cli = Path(os.environ.get('VERCEL_CLI_ENTRY', 'C:/Users/mmajd/AppData/Roaming/npm/node_modules/vercel/dist/vc.js'))
+    command = ['node', str(cli)] if cli.is_file() else [shutil.which('vercel') or 'vercel']
+    refreshed = subprocess.run([*command, 'whoami', '--format', 'json',
         '--global-config', str(auth_path.parent), '--non-interactive'],
         capture_output=True, text=True, encoding='utf8', timeout=45)
     if refreshed.returncode:
