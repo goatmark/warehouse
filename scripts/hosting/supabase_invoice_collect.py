@@ -112,6 +112,8 @@ def main():
     args = parser.parse_args()
     from pypdf import PdfReader
     now = datetime.now(timezone.utc).isoformat()
+    evidence_file=Path(args.invoice_dir)/'gmail-invoice-evidence.json'
+    evidence={r['invoice_id']:r['evidence_url'] for r in json.loads(evidence_file.read_text(encoding='utf-8'))} if evidence_file.exists() else {}
     rows, summaries = [], []
     raw_dir = Path(args.raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +123,7 @@ def main():
         invoice = parse_invoice(text, invoice_id)
         invoice['source_sha256'] = hashlib.sha256(file.read_bytes()).hexdigest()
         invoice['evidence_file'] = str(file.resolve()).replace('\\', '/')
-        rows.extend(normalize(invoice, invoice['evidence_file'], now))
+        rows.extend(normalize(invoice, evidence.get(invoice_id,invoice['evidence_file']), now))
         summaries.append(invoice)
         (raw_dir / f'{invoice_id}.json').write_text(json.dumps(invoice, indent=2), encoding='utf-8')
     known = [

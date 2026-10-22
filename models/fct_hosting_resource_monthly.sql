@@ -24,10 +24,10 @@ WITH dedup AS (
  FROM split
 ), attributed AS (
  SELECT r.*,
-   COALESCE(b.project,IF(r.cost_kind='account_fee','shared','unattributed')) project,
-   COALESCE(b.service,IF(r.cost_kind='account_fee','account-fee','unattributed')) service,
-   COALESCE(b.environment,IF(r.cost_kind='account_fee','shared','unattributed')) environment,
-   IF(b.resource_id IS NOT NULL,'resource_ownership',IF(r.cost_kind='account_fee','shared_account_fee','unattributed')) attribution_method,
+   COALESCE(b.project,'unattributed') project,
+   COALESCE(b.service,'unattributed') service,
+   COALESCE(b.environment,'unattributed') environment,
+   IF(b.resource_id IS NOT NULL,'resource_ownership','unattributed') attribution_method,
    b.evidence_url ownership_evidence_url
  FROM rounded r LEFT JOIN {{ ref('infra_hosting_resource_bindings') }} b
   ON r.vendor=b.vendor AND r.resource_id=b.resource_id

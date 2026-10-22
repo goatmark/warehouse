@@ -85,6 +85,7 @@ def main():
     p.add_argument('--ensure-table',action='store_true')
     p.add_argument('--dry-run',action='store_true')
     p.add_argument('--ownership-json',type=Path,action='append',default=[])
+    p.add_argument('--replace-ownership',action='store_true',help='Explicitly correct reviewed resource ownership; never infer a transfer')
     a=p.parse_args()
     rows=[]
     for path in a.inputs:
@@ -105,10 +106,16 @@ def main():
                 binding['valid_to']=timestamp(binding['valid_to']).date().isoformat() if binding['valid_to'] else ''
                 if binding['vendor'] not in VENDORS or not all(binding[f] for f in fields if f!='valid_to'):
                     raise ValueError('Incomplete resource ownership/evidence')
-                identity=(binding['vendor'],binding['resource_id'],binding['valid_from'])
-                previous=next((b for b in bindings if (b['vendor'],b['resource_id'],b['valid_from'])==identity),None)
-                if previous and previous!=binding:raise ValueError('Ownership conflicts with existing binding; review dates manually')
-                if not previous:bindings.append(binding)
+                candidates=[b for b in bindings if b['vendor']==binding['vendor'] and b['resource_id']==binding['resource_id']]
+                previous=next((b for b in candidates if not b['valid_to'] and not binding['valid_to']),None)
+                if previous:
+                    same_owner=all(previous[f]==binding[f] for f in ['project','service','environment'])
+                    if not same_owner and not a.replace_ownership:raise ValueError('Ownership conflicts; explicit review/correction or dated transfer required')
+                    if same_owner or a.replace_ownership:
+                        first=min(previous['valid_from'],binding['valid_from'])
+                        previous.update(binding);previous['valid_from']=first
+                elif not candidates:bindings.append(binding)
+                elif binding not in candidates:raise ValueError('Existing closed ownership intervals require explicit dated review')
         if not a.dry_run:
             with seed.open('w',newline='',encoding='utf-8') as stream:
                 writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(bindings)

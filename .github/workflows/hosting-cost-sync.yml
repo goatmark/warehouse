@@ -1,0 +1,83 @@
+name: Native hosting billing
+
+on:
+  schedule:
+    - cron: '45 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hosting-cost-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pip install dbt-bigquery google-auth requests pypdf
+      - run: npm install -g vercel
+      - name: Reporting identities
+        env:
+          GCP_DWH_CREDENTIALS_JSON: ${{ secrets.GCP_DWH_CREDENTIALS_JSON }}
+          VERCEL_GOATMARK_AUTH_JSON: ${{ secrets.VERCEL_GOATMARK_AUTH_JSON }}
+          VERCEL_PREPSAVVY_AUTH_JSON: ${{ secrets.VERCEL_PREPSAVVY_AUTH_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_DWH_CREDENTIALS_JSON" > "$RUNNER_TEMP/gcp-dwh.json"
+          mkdir -p "$RUNNER_TEMP/dbt" "$RUNNER_TEMP/vercel-goatmark" "$RUNNER_TEMP/vercel-prepsavvy"
+          printf '%s' "$VERCEL_GOATMARK_AUTH_JSON" > "$RUNNER_TEMP/vercel-goatmark/auth.json"
+          printf '%s' "$VERCEL_PREPSAVVY_AUTH_JSON" > "$RUNNER_TEMP/vercel-prepsavvy/auth.json"
+          cat > "$RUNNER_TEMP/dbt/profiles.yml" <<EOF
+          default:
+            target: prod
+            outputs:
+              prod:
+                type: bigquery
+                method: service-account
+                project: data-warehouse-475122
+                dataset: dwh_reporting
+                keyfile: $RUNNER_TEMP/gcp-dwh.json
+                location: US
+                threads: 4
+          EOF
+      - name: Native exporters, facts and reconciliation
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-dwh.json
+          VERCEL_GOATMARK_AUTH_FILE: ${{ runner.temp }}/vercel-goatmark/auth.json
+          VERCEL_PREPSAVVY_AUTH_FILE: ${{ runner.temp }}/vercel-prepsavvy/auth.json
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_BILLING_TOKEN }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+          HOSTING_GMAIL_OAUTH_JSON: ${{ secrets.HOSTING_GMAIL_OAUTH_JSON }}
+        run: python scripts/sync_hosting_costs.py --output-dir "$RUNNER_TEMP/hosting" --profiles-dir "$RUNNER_TEMP/dbt"
+      - name: Persist refreshed reporting OAuth sessions
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          for owner in GOATMARK PREPSAVVY; do
+            lower=$(printf '%s' "$owner" | tr '[:upper:]' '[:lower:]')
+            file="$RUNNER_TEMP/vercel-$lower/auth.json"
+            if [ -s "$file" ]; then
+              gh secret set "VERCEL_${owner}_AUTH_JSON" --repo "$GITHUB_REPOSITORY" < "$file"
+            fi
+          done
+      - name: Persist evidenced new resource ownership
+        run: |
+          if ! git diff --quiet -- seeds/infra_hosting_resource_bindings.csv; then
+            git config user.name 'Warehouse automation'
+            git config user.email 'warehouse@users.noreply.github.com'
+            git add seeds/infra_hosting_resource_bindings.csv
+            git commit -m 'Refresh evidenced hosting resource ownership'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
