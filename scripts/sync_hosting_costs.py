@@ -27,10 +27,16 @@ def main():
     now=datetime.now(timezone.utc)
     def load(vendor):
         run(loader,out/f'{vendor}.jsonl','--ownership-json',out/f'{vendor}.ownership.jsonl')
-    run(collect/'vercel_costs.py','--from',(now-timedelta(days=40)).date().isoformat()+'T00:00:00Z',
-        '--to',now.date().isoformat()+'T00:00:00Z','--output',out/'vercel.jsonl',
-        '--ownership-output',out/'vercel.ownership.jsonl','--cache-dir',out/'raw/vercel')
-    load('vercel')
+    failed=[]
+    try:
+        run(collect/'vercel_costs.py','--from',(now-timedelta(days=40)).date().isoformat()+'T00:00:00Z',
+            '--to',now.date().isoformat()+'T00:00:00Z','--output',out/'vercel.jsonl',
+            '--ownership-output',out/'vercel.ownership.jsonl','--cache-dir',out/'raw/vercel')
+        load('vercel')
+    except subprocess.CalledProcessError as error:
+        # An expired Vercel session must not block Railway, DigitalOcean, Supabase, GCP and
+        # the reports. Keep going, then fail the run at the end so the problem stays visible.
+        failed.append('vercel');print(f'WARNING vercel collection failed ({error.returncode}); continuing with other vendors',flush=True)
     run(collect/'vercel_marketplace_gmail_collect.py','--output',out/'vercel-marketplace.jsonl',
         '--ownership-output',out/'vercel-marketplace.ownership.jsonl')
     load('vercel-marketplace')
@@ -51,6 +57,8 @@ def main():
     load('google_cloud')
     subprocess.run(['dbt','build','--project-dir',str(ROOT),'--profiles-dir',args.profiles_dir,
         '--select','+rpt_infrastructure_cost_monthly','rpt_hosting_reconciliation_monthly','+rpt_hosting_source_coverage'],check=True,cwd=ROOT)
+    if failed:
+        print('Completed with stale vendor data: '+', '.join(failed));raise SystemExit(1)
     print('Native hosting exporters, ownership, reconciliation and financial report completed')
 
 
