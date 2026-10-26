@@ -37,9 +37,12 @@ def main():
         # An expired Vercel session must not block Railway, DigitalOcean, Supabase, GCP and
         # the reports. Keep going, then fail the run at the end so the problem stays visible.
         failed.append('vercel');print(f'WARNING vercel collection failed ({error.returncode}); continuing with other vendors',flush=True)
-    run(collect/'vercel_marketplace_gmail_collect.py','--output',out/'vercel-marketplace.jsonl',
-        '--ownership-output',out/'vercel-marketplace.ownership.jsonl')
-    load('vercel-marketplace')
+    try:
+        run(collect/'vercel_marketplace_gmail_collect.py','--output',out/'vercel-marketplace.jsonl',
+            '--ownership-output',out/'vercel-marketplace.ownership.jsonl')
+        load('vercel-marketplace')
+    except subprocess.CalledProcessError as error:
+        failed.append('vercel-marketplace');print(f'WARNING vercel-marketplace failed ({error.returncode}); continuing',flush=True)
     run(collect/'railway_collect.py','--period','current','--period','previous',
         '--output',out/'railway.jsonl','--ownership-output',out/'railway.ownership.jsonl','--raw-dir',out/'raw/railway')
     load('railway')
