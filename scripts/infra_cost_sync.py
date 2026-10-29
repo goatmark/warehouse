@@ -117,10 +117,13 @@ def openrouter_rows(key, start, end):
     meta = request('https://openrouter.ai/api/v1/analytics/meta', headers)['data']
     if 'api_key_id' not in {d['name'] for d in meta['dimensions']}:
         raise ValueError('OpenRouter key attribution dimension unavailable')
+    # include_disabled: retired keys still own historical usage. Without them a
+    # retired key's label has no hash match and its spend lands on
+    # 'unresolved-label:<name>' rows that bindings can never attribute.
     keys = []
     offset = 0
     while True:
-        batch = request('https://openrouter.ai/api/v1/keys?offset=' + str(offset), headers).get('data', [])
+        batch = request('https://openrouter.ai/api/v1/keys?include_disabled=true&offset=' + str(offset), headers).get('data', [])
         keys.extend(batch)
         if len(batch) < 100:
             break
