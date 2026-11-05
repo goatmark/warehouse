@@ -59,8 +59,9 @@ def normalize_focus(lines, team_id, slug, snapshot_at):
         tags = row.get('Tags') or {}
         project_id, project_name = tags.get('ProjectId'), tags.get('ProjectName')
         billed = Decimal(str(row['BilledCost']))
-        effective = Decimal(str(row.get('EffectiveCost', 0)))
-        quantity = Decimal(str(row.get('ConsumedQuantity', 0)))
+        # Vercel sends null for these on some charges, and .get's default does not cover null.
+        effective = Decimal(str(row.get('EffectiveCost') or 0))
+        quantity = Decimal(str(row.get('ConsumedQuantity') or 0))
         if not all(x.is_finite() for x in (billed, effective, quantity)):
             raise ValueError('Nonfinite provider metric')
         raw_total += billed
