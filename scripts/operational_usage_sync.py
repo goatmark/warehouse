@@ -17,6 +17,9 @@ ROOT=Path('C:/Users/mmajd/Projects/prepsavvy-factory').resolve()
 CENTRAL=ROOT/'logs/ai-usage.jsonl'
 CHECKPOINT=Path(__file__).parents[1]/'logs/operational-loaded-ids.json'
 TABLE='data-warehouse-475122.data_finance_business.infra_operational_usage_events'
+# A few torn lines are normal; more than this means the file itself is damaged.
+MALFORMED_FLOOR=20
+MALFORMED_SHARE=0.001
 SCHEMA=[('record_id','STRING'),('at','TIMESTAMP'),('vendor','STRING'),('project','STRING'),
  ('service','STRING'),('environment','STRING'),('credential_id','STRING'),('run_id','STRING'),
  ('generator','STRING'),('stage','STRING'),('cell','STRING'),('model','STRING'),('provider','STRING'),
@@ -65,6 +68,7 @@ def main():
         args.file=[cloud_path]
     paths=args.file if args.file else sorted((ROOT/'experiments').glob('**/*spend.jsonl'))+([CENTRAL] if CENTRAL.exists() else [])
     rows={}
+    scanned,malformed=0,0
     for path in paths:
         path=path.resolve()
         if path!=cloud_path and path!=CENTRAL and (not path.is_relative_to(ROOT/'experiments') or not path.name.endswith('spend.jsonl')):
@@ -73,8 +77,17 @@ def main():
             for line in stream:
                 if not line.strip():continue
                 source_name='drive:'+source['drive_file_id'] if path==cloud_path else path.relative_to(ROOT)
-                row=normalize(json.loads(line),source_name)
+                scanned+=1
+                try:parsed=json.loads(line)
+                except ValueError:
+                    # Concurrent appends through Google Drive tear a few lines apart.
+                    malformed+=1;continue
+                row=normalize(parsed,source_name)
                 if row:rows[row['record_id']]=row
+    if malformed:
+        print(f'Skipped {malformed} malformed lines of {scanned}')
+        if malformed>max(MALFORMED_FLOOR,scanned*MALFORMED_SHARE):
+            raise ValueError(f'{malformed} malformed lines of {scanned}: the source needs review')
     if args.dry_run:
         print(f'Validated {len(rows)} unique metadata-only operational calls from {len(paths)} files');return
     from google.cloud import bigquery

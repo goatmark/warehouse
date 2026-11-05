@@ -14,11 +14,16 @@ import os
 from pathlib import Path
 import subprocess
 import shutil
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
 BASE = Path('H:/My Drive/Infra/ai-cost-attribution/hosting-resources')
+# The charges export is slow and timed out at 120 seconds on 2026-11-04 and 11-05.
+FETCH_TIMEOUT_SECONDS = 300
+FETCH_ATTEMPTS = 3
+FETCH_RETRY_SECONDS = 30
 TEAMS = {
     'goatmarks-projects': ('team_eqHjIkG5TAohedASe9hAxiTh', 'VERCEL_GOATMARK_TOKEN',
         Path('C:/Users/mmajd/AppData/Roaming/xdg.data/com.vercel.cli/auth.json')),
@@ -114,9 +119,18 @@ def fetch_focus(team_id, token, start, end, target):
                                     headers={'Authorization': 'Bearer ' + token})
     temporary = target.with_suffix(target.suffix + '.tmp')
     try:
-        with urllib.request.urlopen(request, timeout=120) as response, temporary.open('wb') as out:
-            while block := response.read(1024 * 1024):
-                out.write(block)
+        for attempt in range(FETCH_ATTEMPTS):
+            try:
+                with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response, temporary.open('wb') as out:
+                    while block := response.read(1024 * 1024):
+                        out.write(block)
+                break
+            except (TimeoutError, urllib.error.URLError) as error:
+                if isinstance(error, urllib.error.HTTPError) and error.code < 500:
+                    raise
+                if attempt == FETCH_ATTEMPTS - 1:
+                    raise
+                time.sleep(FETCH_RETRY_SECONDS * (attempt + 1))
         temporary.replace(target)
     finally:
         temporary.unlink(missing_ok=True)
