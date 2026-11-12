@@ -97,6 +97,7 @@ def main():
         seed=Path(__file__).parents[1]/'seeds/infra_hosting_resource_bindings.csv'
         fields=['vendor','resource_id','project','service','environment','valid_from','valid_to','evidence_url']
         with seed.open(newline='',encoding='utf-8') as stream:bindings=list(csv.DictReader(stream))
+        conflicts=[]
         for path in a.ownership_json:
             raw=path.read_text(encoding='utf-8').strip()
             ownership=json.loads(raw) if raw.startswith('[') else [json.loads(line) for line in raw.splitlines() if line.strip()]
@@ -110,12 +111,15 @@ def main():
                 previous=next((b for b in candidates if not b['valid_to'] and not binding['valid_to']),None)
                 if previous:
                     same_owner=all(previous[f]==binding[f] for f in ['project','service','environment'])
-                    if not same_owner and not a.replace_ownership:raise ValueError('Ownership conflicts; explicit review/correction or dated transfer required')
+                    if not same_owner and not a.replace_ownership:conflicts.append({'seed':dict(previous),'live':binding});continue
                     if same_owner or a.replace_ownership:
                         first=min(previous['valid_from'],binding['valid_from'])
                         previous.update(binding);previous['valid_from']=first
                 elif not candidates:bindings.append(binding)
                 elif binding not in candidates:raise ValueError('Existing closed ownership intervals require explicit dated review')
+        if conflicts:
+            for c in conflicts:print('OWNERSHIP CONFLICT seed='+json.dumps(c['seed'])+' live='+json.dumps(c['live']))
+            raise ValueError('Ownership conflicts; explicit review/correction or dated transfer required')
         if not a.dry_run:
             with seed.open('w',newline='',encoding='utf-8') as stream:
                 writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(bindings)
