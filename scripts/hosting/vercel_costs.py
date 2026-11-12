@@ -39,8 +39,11 @@ def owner(project_name, service_name, team_id=None):
         return ('shared', 'shared-platform-fee' if service_name == 'Pro' else 'unattributed')
     if project_name in {'bibletimes', 'bibletimes-intel', 'bt-report'}:
         return ('bibletimes', 'serving' if project_name == 'bibletimes' else 'analytics')
-    if project_name in {'prepsavvy', 'prepsavvy-ads-sync'}:
-        return ('prepsavvy', 'serving' if project_name == 'prepsavvy' else 'ops')
+    # The retired legacy goatmark-team prepsavvy deployment was renamed on
+    # retirement (2026-10-30) to free the project name; its trailing charges
+    # remain prepsavvy serving.
+    if project_name in {'prepsavvy', 'prepsavvy-ads-sync', 'prepsavvy-1793978370492-xVQn'}:
+        return ('prepsavvy', 'ops' if project_name == 'prepsavvy-ads-sync' else 'serving')
     if project_name in {'website-template', 'website'}:
         return ('website', 'serving')
     # Preserve distinct named projects. Never reassign unrelated apps to a venture.
