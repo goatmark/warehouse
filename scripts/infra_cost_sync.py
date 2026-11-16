@@ -6,6 +6,9 @@ costs and token usage remain separate facts. Run --vendor openrouter --days 7.
 import argparse
 import json
 import os
+import time
+from email.utils import parsedate_to_datetime
+from urllib.error import HTTPError, URLError
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -28,12 +31,49 @@ def secret(vendor):
     return (INFRA / filename).read_text().strip()
 
 
+def retry_delay(value, attempt):
+    # Respect provider cooldowns; do not retry early when its wait exceeds budget.
+    fallback = 5 * 3 ** attempt
+    if not value:
+        return fallback
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            stamp = parsedate_to_datetime(value)
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            seconds = (stamp - datetime.now(timezone.utc)).total_seconds()
+        except (ValueError, TypeError, OverflowError):
+            return fallback
+    if seconds > 120:
+        return None
+    return max(fallback, seconds, 0)
+
+
 def request(url, headers, body=None):
     data = json.dumps(body).encode() if body is not None else None
-    req = Request(url, data=data, headers={**headers, 'Content-Type': 'application/json'})
-    # HTTP errors propagate without printing response bodies or headers.
-    with urlopen(req, timeout=90) as response:
-        return json.load(response)
+    for attempt in range(4):
+        req = Request(url, data=data, headers={**headers, 'Content-Type': 'application/json'})
+        retry_after = None
+        try:
+            with urlopen(req, timeout=90) as response:
+                return json.load(response)
+        except HTTPError as error:
+            # Never emit response bodies, headers, URLs or credentials.
+            if error.code not in (408, 429, 500, 502, 503, 504) or attempt == 3:
+                error.close()
+                raise
+            retry_after = error.headers.get('Retry-After') if error.headers else None
+            error.close()
+        except (URLError, TimeoutError, ConnectionError):
+            if attempt == 3:
+                raise
+        delay = retry_delay(retry_after, attempt)
+        if delay is None:
+            raise RuntimeError('Provider cooldown exceeds bounded retry budget')
+        print(f'Provider read transient failure; retry {attempt + 1}/3 in {delay:g}s')
+        time.sleep(delay)
 
 
 def pages(url, params, headers):
