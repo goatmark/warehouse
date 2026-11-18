@@ -113,12 +113,6 @@ sources:
     database: data-warehouse-475122
     schema: data_website
     tables:
-      - name: notion_embeddings
-        config:
-          loaded_at_field: synced_at
-          freshness:
-            warn_after: {count: 12, period: hour}
-            error_after: {count: 30, period: hour}
       # blog_posts: static-in-practice (last synced 2026-02-06) — no freshness
       - name: blog_posts
       - name: users
