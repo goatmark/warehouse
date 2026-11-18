@@ -20,6 +20,11 @@ TABLE='data-warehouse-475122.data_finance_business.infra_operational_usage_event
 # A few torn lines are normal; more than this means the file itself is damaged.
 MALFORMED_FLOOR=20
 MALFORMED_SHARE=0.001
+# The factory key used later than this past the newest mirrored call means calls
+# were made that never reached the mirror (2026-11-11: about 61,000 calls on
+# lessons-v5 and recipe paths that bypass the meter, while this job loaded 0).
+MIRROR_LAG_HOURS=3
+OPENROUTER_KEYS='https://openrouter.ai/api/v1/keys/'
 SCHEMA=[('record_id','STRING'),('at','TIMESTAMP'),('vendor','STRING'),('project','STRING'),
  ('service','STRING'),('environment','STRING'),('credential_id','STRING'),('run_id','STRING'),
  ('generator','STRING'),('stage','STRING'),('cell','STRING'),('model','STRING'),('provider','STRING'),
@@ -44,6 +49,23 @@ def normalize(row,source):
     result['source_file']=str(source)
     result['loaded_at']=datetime.now(timezone.utc).isoformat()
     return result
+
+
+def key_last_used(key_hash):
+    """When OpenRouter last saw the registered factory key (management key; no inference secret is read)."""
+    token=os.environ.get('OPENROUTER_MANAGEMENT_KEY') or Path('H:/My Drive/Infra/openrouter/OPENROUTER_MANAGEMENT_KEY.txt').read_text().strip()
+    req=urllib.request.Request(OPENROUTER_KEYS+key_hash,headers={'Authorization':'Bearer '+token.strip()})
+    with urllib.request.urlopen(req,timeout=60) as response:last=json.load(response)['data'].get('last_used_at')
+    # OpenRouter reports nanoseconds; seconds are enough for an hours threshold.
+    return datetime.fromisoformat(last[:19]+'+00:00') if last else None
+
+
+def mirror_gap(newest,last_used):
+    """Hours of key use the mirror is missing, or None when the mirror is current."""
+    if last_used is None:return None
+    if newest is None:return float('inf')
+    hours=(last_used-newest).total_seconds()/3600
+    return hours if hours>MIRROR_LAG_HOURS else None
 
 
 def main():
@@ -102,7 +124,15 @@ def main():
     CHECKPOINT.parent.mkdir(exist_ok=True)
     CHECKPOINT.write_text(json.dumps(sorted(known|rows.keys())),encoding='utf-8')
     print(f'Loaded {len(pending)} new operational calls; {len(rows)} scanned from {len(paths)} allowlisted files')
-    if cloud_path:cloud_path.unlink()
+    if cloud_path:
+        cloud_path.unlink()
+        newest=max((datetime.fromisoformat(row['at']) for row in rows.values()),default=None)
+        last_used=key_last_used(source['openrouter_key_hash'])
+        print(f'Newest mirrored call {newest.isoformat() if newest else "none"}; factory key last used {last_used.isoformat() if last_used else "never"}')
+        gap=mirror_gap(newest,last_used)
+        if gap is not None:
+            raise SystemExit(f'The factory key was used {gap:.1f} hours after the newest mirrored call: '
+              'calls are reaching OpenRouter without reaching the metadata mirror')
 
 
 if __name__=='__main__':main()

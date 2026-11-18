@@ -2,6 +2,7 @@
   "prepsavvy_factory": {
     "drive_file_id": "1ZLiTgmV9GRQsGmsRYSn7iEycvYpGCwZP",
     "name": "prepsavvy-factory.jsonl",
+    "openrouter_key_hash": "f184c2d5d2ba81b033bcc8d7c3ac096edc520a491d474d2d419741f7ae72820c",
     "project": "prepsavvy",
     "service": "factory"
   }

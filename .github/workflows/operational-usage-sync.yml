@@ -45,7 +45,10 @@ jobs:
       - name: Read allowlisted Drive metadata
         env:
           OPERATIONAL_DRIVE_TOKEN_JSON: ${{ secrets.OPERATIONAL_DRIVE_TOKEN_JSON }}
+          OPENROUTER_MANAGEMENT_KEY: ${{ secrets.OPENROUTER_MANAGEMENT_KEY }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-dwh.json
         run: python scripts/operational_usage_sync.py --drive
       - name: Build separate operational facts
+        # Rows already loaded still reach the fact when the mirror check fails the job.
+        if: ${{ !cancelled() }}
         run: dbt build --profiles-dir "$RUNNER_TEMP/dbt" --select +rpt_infra_operational_usage_daily
