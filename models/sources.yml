@@ -121,18 +121,6 @@ sources:
             error_after: {count: 30, period: hour}
       # blog_posts: static-in-practice (last synced 2026-02-06) — no freshness
       - name: blog_posts
-      - name: email_settings
-        config:
-          loaded_at_field: synced_at
-          freshness:
-            warn_after: {count: 12, period: hour}
-            error_after: {count: 30, period: hour}
-      - name: priorities
-        config:
-          loaded_at_field: synced_at
-          freshness:
-            warn_after: {count: 12, period: hour}
-            error_after: {count: 30, period: hour}
       - name: users
         config:
           loaded_at_field: synced_at
