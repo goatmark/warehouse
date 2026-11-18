@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       days:
-        description: Completed UTC days to refresh
-        default: '35'
-        required: true
+        description: Completed UTC days to refresh (blank = 35 for OpenRouter, 7 for the others)
+        default: ''
+        required: false
 
 permissions:
   contents: read
@@ -43,7 +43,7 @@ jobs:
           OPENAI_ADMIN_KEY: ${{ secrets.OPENAI_ADMIN_KEY }}
           ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
           OPENROUTER_MANAGEMENT_KEY: ${{ secrets.OPENROUTER_MANAGEMENT_KEY }}
-          COST_DAYS: ${{ inputs.days || '35' }}
+          COST_DAYS: ${{ inputs.days || (matrix.vendor == 'openrouter' && '35' || '7') }}
         run: python scripts/infra_cost_sync.py --vendor '${{ matrix.vendor }}' --days "$COST_DAYS"
 
   report:

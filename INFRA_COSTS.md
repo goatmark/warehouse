@@ -48,8 +48,9 @@ exclusive. Defaults cover seven completed UTC days. Snapshot markers include
 empty days so corrections remove stale rows. Pagination loops and truncated
 one-day results fail visibly. Raw snapshots remain append-only.
 
-`.github/workflows/infra-cost-sync.yml` runs daily at 06:15 UTC and refreshes the last 35
-completed days, because OpenRouter restates settled days after a week. Provider jobs
+`.github/workflows/infra-cost-sync.yml` runs daily at 06:15 UTC. OpenRouter refreshes the last 35
+completed days because it restates settled days after a week; OpenAI and
+Anthropic refresh 7 (35 in parallel hits the BigQuery table-update rate limit). Provider jobs
 run independently, and the report build waits for all of them to succeed.
 The reporting repository holds admin/management keys in GitHub Actions secrets,
 separate from inference keys. Local fallback paths are in H:/My Drive/Infra.
