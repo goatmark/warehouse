@@ -149,7 +149,7 @@ files or the configured exact Drive metadata-file ID. Prompts, responses, API
 keys and error bodies are never persisted. Factory meter calls mirror to
 `H:/My Drive/Infra/ai-cost-attribution/operational/prepsavvy-factory.jsonl` for
 Drive synchronization. `.github/workflows/operational-usage-sync.yml` collects
-that file hourly using the existing reporting OAuth identity. No Windows task
+that file once a day at 06:10 UTC (hourly until 2026-11-24) using the existing reporting OAuth identity. No Windows task
 is installed. Existing generator processes require their normal restart before
 new central logging code takes effect; no processes are killed by ingestion.
 
